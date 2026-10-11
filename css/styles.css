@@ -398,3 +398,16 @@ body.tut-paused .tut-hi{animation-play-state:paused}
 }
 #rig .hv-warn{animation:hvBlink .9s steps(2,jump-none) infinite}
 @keyframes hvBlink{50%{fill:#fbe3db}}
+
+/* tutorial step navigation: Previous / Next on the first row, Pause · Speed · Stop below */
+.tut-ctl{display:grid;grid-template-columns:repeat(6,auto);gap:8px}
+.tut-ctl > #tut-prev{grid-column:span 3;order:-2}
+.tut-ctl > #tut-next{grid-column:span 3;order:-1}
+.tut-ctl > .tut-pause,.tut-ctl > .tut-speed,.tut-ctl > .stop{grid-column:span 2}
+.tut-btn:disabled{opacity:.38;cursor:default}
+.tut-btn:disabled:hover{background:rgba(255,255,255,.1)}
+@media (max-width:640px){
+  .tut-ctl{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+  .tut-ctl > *{flex:none;min-width:0}
+  .tut-ctl .tut-btn{padding-left:8px;padding-right:8px}
+}

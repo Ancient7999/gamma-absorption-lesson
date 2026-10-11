@@ -941,7 +941,7 @@
   /* =====================================================================
      12. PRACTICAL: bench, source and tongs, lead sheets, scaler, counting
      ===================================================================== */
-  const tut = { on: false, cancel: false, skip: false };
+  const tut = { on: false, cancel: false, skip: false, idx: -1, ff: false, target: 0, restartTo: null, gen: 0, plan: null };
   (function practical() {
     const svg = $('rig'); defsFor(svg, 'rg');
     const BEAM = 250, HOLD_X = 290, SLOT_X = 470, WIN_X = 660, PLATE_H = 116, STACK_TOP = 188, RACK_TOP = 414, PX_CM = 50;
@@ -1110,6 +1110,7 @@
     /* ---------- counting ---------- */
     let flashT = 0;
     function flash() {
+      if (tut.on && tut.skip) return;          // no flashes or clicks while a step is being skipped
       SC.led.setAttribute('opacity', 1); TB.win.setAttribute('opacity', .8); flashT = performance.now();
       clickSound(); cursorTick();
     }
@@ -1134,7 +1135,7 @@
     }
     function tick() {
       const r = st.run; if (!r || !st.counting) return;
-      const p = Math.min(1, (tnow() - r.t0) / r.dur);
+      let p = Math.min(1, (tnow() - r.t0) / r.dur); if (tut.on && tut.skip) p = 1;
       let n;
       if (r.arr) { while (r.idx < r.arr.length && r.arr[r.idx] <= p) r.idx++; n = r.idx; }
       else n = Math.round(r.N * p);
@@ -1194,9 +1195,10 @@
 
     /* ---------- dragging: source with tongs, lead sheets ---------- */
     function tween(o, x, y, ms, place) {
-      const x0 = o.x, y0 = o.y, t0 = tnow();
+      const x0 = o.x, y0 = o.y, t0 = tnow(), g0 = tut.gen;
       return new Promise(res => {
         (function f() {
+          if (g0 !== tut.gen) return res();
           let k = ms > 0 ? Math.min(1, (tnow() - t0) / ms) : 1; if (tut.on && tut.skip) k = 1;
           if (tut.on && tut.cancel) k = 1;
           const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -1607,9 +1609,9 @@
     });
     function tScroll(y) {
       return new Promise(res => {
-        const y0 = window.scrollY, t0 = tnow(), ms = Math.min(900, 250 + Math.abs(y - y0) * .5);
+        const y0 = window.scrollY, t0 = tnow(), ms = Math.min(900, 250 + Math.abs(y - y0) * .5), g0 = tut.gen;
         (function f() {
-          if (tut.cancel) return res();
+          if (tut.cancel || g0 !== tut.gen) return res();
           let k = Math.min(1, (tnow() - t0) / ms); if (tut.skip) k = 1;
           const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
           window.scrollTo({ top: y0 + (y - y0) * e, behavior: 'instant' });
@@ -1625,7 +1627,7 @@
         (function chkW() { if (tut.cancel) return rej(STOP); if (tut.skip || tnow() - t0 >= ms) return res(); setTimeout(chkW, 25); })();
       });
     }
-    function step(title, text, f) { tut.skip = false; tTitle.textContent = title; tText.textContent = text; tF.innerHTML = f || ''; }
+    function step(title, text, f) { navStep(); tTitle.textContent = title; tText.textContent = text; tF.innerHTML = f || ''; }
     let hiEls = [];
     function hi(...els) { hiEls.forEach(e => e.classList.remove('tut-hi')); hiEls = els.filter(Boolean); hiEls.forEach(e => e.classList.add('tut-hi')); }
     async function scrollToEl(elm, top) {
@@ -1672,8 +1674,8 @@
       hi($('btn-rec')); record(); await wait(500); hi();
       return r;
     }
-    async function tutorial() {
-      tut.on = true; tut.cancel = false; document.body.classList.add('tut-on'); bar.hidden = false; btnTut.disabled = true;
+    async function tutorial(target) {
+      tut.on = true; tut.cancel = false; navBegin(target); document.body.classList.add('tut-on'); bar.hidden = false; btnTut.disabled = true;
       try {
         resetAll();
         st.rng = mulberry32(20261011);
@@ -1771,17 +1773,70 @@
       } catch (e) {
         if (e !== STOP) throw e;
       } finally {
+        const again = tut.restartTo; tut.restartTo = null; tut.gen++; tut.ff = false; document.body.classList.remove('tut-ff');
         if (st.counting) { st.counting = false; runResolve = null; }
-        tut.on = false; tut.skip = false; resetPlayback(); hi(); hiSvg(null); st.rng = Math.random; gN = null;
+        tut.on = false; tut.skip = false; if (again == null) resetPlayback(); hi(); hiSvg(null); st.rng = Math.random; gN = null;
         if (SRC.loc === 'drag') { tongsOn = false; SRC.x = POT_SRC.x; SRC.y = POT_SRC.y; placeSrc(); placeTongs(); setSrcLoc('pot'); }
         PLATES.forEach(p => { if (p.loc === 'anim') { p.loc = 'rack'; rackLayer.appendChild(p.g); const h = p.home(); p.x = h.x; p.y = h.y; placePlate(p); } });
         drawGraph(); updStatus();
-        document.body.classList.remove('tut-on'); bar.hidden = true; btnTut.disabled = false;
+        if (again == null) { document.body.classList.remove('tut-on'); bar.hidden = true; btnTut.disabled = false; tut.plan = null; }
+        updNav();
+        if (again != null) setTimeout(() => tutorial(again), 0);
       }
     }
     btnTut.addEventListener('click', () => { if (!tut.on) tutorial(); });
-    $('tut-stop').addEventListener('click', () => { tut.cancel = true; });
-    $('tut-skip').addEventListener('click', () => { tut.skip = true; });
+    $('tut-stop').addEventListener('click', () => { tut.restartTo = null; tut.cancel = true; tut.gen++; });
+    /* ---------- step navigation: Previous re-runs the tutorial instantly up to the step before, Next finishes the current step ---------- */
+    const btnPrevS = document.getElementById('tut-prev'), btnNextS = document.getElementById('tut-next');
+    function updNav() { bar.dataset.step = tut.idx; if (btnPrevS) btnPrevS.disabled = !tut.on || (tut.restartTo != null ? tut.restartTo : tut.ff ? tut.target : tut.idx) <= 0; }
+    function freezeNew() {                    // keep animations created by a jump frozen while paused
+      const more = document.getAnimations().filter(a => a.playState === 'running');
+      more.forEach(a => a.pause()); pausedAnims.push(...more);
+    }
+    function navBegin(target) {
+      const prac = document.getElementById('view-practical');
+      if (target === undefined) {                // remember the status messages as they were when the run started
+        tut.live = Array.from(prac.querySelectorAll('[aria-live="polite"]')).filter(e => !bar.contains(e) && !e.querySelector('svg, canvas, input, button, select')).map(e => [e, e.innerHTML, e.className]);
+      } else if (tut.live) tut.live.forEach(([e, h, c]) => { e.innerHTML = h; e.className = c; });
+      if (target !== undefined) {                // short effects frozen by a pause belong to the cancelled run: let them end now
+        pausedAnims = pausedAnims.filter(a => {
+          let finite = false; try { finite = a.effect && a.effect.getComputedTiming().endTime !== Infinity; } catch (_) { /* ignore */ }
+          if (finite) { try { a.finish(); } catch (_) { /* ignore */ } }
+          return !finite;
+        });
+      }
+      tut.idx = -1; tut.target = target || 0; tut.ff = tut.target > 0; tut.skip = tut.ff; tut.restartTo = null;
+      document.body.classList.toggle('tut-ff', tut.ff); updNav();
+    }
+    function navStep() {
+      tut.idx++;
+      if (tut.ff && tut.idx >= tut.target) { tut.ff = false; document.body.classList.remove('tut-ff'); }
+      tut.skip = tut.ff;
+      if (TC.paused && !tut.ff) requestAnimationFrame(freezeNew);
+      updNav();
+    }
+    function navPrev() {
+      if (!tut.on && tut.restartTo == null) return;
+      if (tut.restartTo != null) tut.restartTo = Math.max(0, tut.restartTo - 1);
+      else if (tut.ff) tut.target = Math.max(0, tut.target - 1);
+      else { if (tut.idx <= 0) return; tut.restartTo = tut.idx - 1; tut.cancel = true; tut.gen++; }
+      updNav();
+    }
+    function navNext() {
+      if (!tut.on && tut.restartTo == null) return;
+      if (tut.restartTo != null) tut.restartTo++;
+      else if (tut.ff) tut.target++;
+      else tut.skip = true;
+      updNav();
+    }
+    if (btnPrevS) btnPrevS.addEventListener('click', navPrev);
+    if (btnNextS) btnNextS.addEventListener('click', navNext);
+    document.addEventListener('keydown', e => {
+      if (!tut.on || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const t = e.target;
+      if (t.closest && t.closest('select, textarea, [contenteditable], input[type="range"], [role="slider"], [role="spinbutton"], [tabindex]:not(button):not(a):not(input)')) return;   // instrument controls keep their arrow keys
+      e.preventDefault(); if (e.key === 'ArrowLeft') navPrev(); else navNext();
+    });
 
     PLATES.forEach(placePlate); placeSrc(); placeTongs();
     resetAll();

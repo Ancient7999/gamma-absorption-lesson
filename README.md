@@ -22,7 +22,7 @@ Live site: https://sonicunligmated.github.io/gamma-absorption-lesson/
   - three counts each for background, no absorber and every thickness, recorded by button or typed, with averages checked; I and ln(I₀/I) are computed in the table;
   - graph with a draggable best-fit line and slope triangle;
   - stepwise calculation (I_BG, I₀, one ln(I₀/I), μ, HVL) checked with tolerances and hints for common slips (no background subtraction, log₁₀ instead of ln, inverted ratio, slope upside down);
-  - a guided tutorial with Pause/Resume, playback speed, Skip step and Stop, and Start over.
+  - a guided tutorial with Pause/Resume, playback speed, Previous step / Next step (← → keys) and Stop, and Start over.
 
 ## Example values
 
