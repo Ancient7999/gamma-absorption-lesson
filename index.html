@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gamma absorption · Absorption coefficient of lead for gamma radiation</title>
+<meta name="description" content="Absorption coefficient of lead for gamma radiation: aim, theory, method, worked example, MCQs and an immersive Geiger–Müller counter practical.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f3f1ec'/%3E%3Crect x='13' y='6' width='6' height='20' rx='1' fill='%236b737d'/%3E%3Cpath d='M3 16h9M20 16h4' stroke='%23c98a10' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='27' cy='16' r='2.4' fill='%23c98a10' opacity='.55'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/Epilogue-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/AlbertSans-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div id="cursor" aria-hidden="true">
+  <svg viewBox="-6 -9 44 26" width="44" height="26"><path class="cu-cable" d="M30 0 C36 0 36 9 42 10"/><rect class="cu-body" x="2" y="-4.6" width="26" height="9.2" rx="2.2"/><rect class="cu-band" x="18" y="-4.6" width="3" height="9.2"/><rect class="cu-grip" x="22" y="-3.6" width="7" height="7.2" rx="1.4"/><rect class="cu-window" x="-.6" y="-3.8" width="3.4" height="7.6" rx="1"/><circle class="cu-flash" cx="-2" cy="0" r="3.2"/><circle class="cu-dot" cx="0" cy="0" r="1"/></svg>
+</div>
+
+<div class="app">
+  <aside class="rail" aria-label="Lesson progress">
+    <div class="rail-brand">
+      <div class="rail-eyebrow">Physics practical</div>
+      <div class="rail-title">Gamma absorption</div>
+      <div class="rail-sub">absorption coefficient of lead</div>
+    </div>
+    <div class="rail-body">
+      <div class="rail-gauge" aria-hidden="true"><div class="rail-fill" id="rail-fill"></div><div class="rail-mark" id="rail-mark"></div></div>
+      <nav class="rail-nav" id="rail-nav" aria-label="Sections"></nav>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="stage-top">
+      <button type="button" class="btn-prev" id="btn-prev">← Prev</button>
+    </div>
+
+    <!-- ============ AIM AND OUTCOMES ============ -->
+    <section class="view" id="view-aim" data-title="Aim and outcomes">
+      <div class="sheet">
+        <p class="disclaimer">This lesson is an AI-assisted introduction, not scientific-grade material. It is meant to build a working picture before the lecture and the lab session; the lab manual and the instructor take priority where they differ.</p>
+        <p class="eyebrow">Physics practical · Gamma radiation</p>
+        <h1 class="page-h">Absorption coefficient of lead for gamma radiation</h1>
+        <figure class="aim-figure">
+          <svg id="aim-hero" viewBox="0 0 800 300" role="img" aria-label="Gamma photons leave a source, pass through lead sheets of increasing thickness and fewer of them reach a Geiger–Müller tube"></svg>
+        </figure>
+        <div class="aim-block">
+          <div class="aim-label">Aim</div>
+          <p class="aim-text">To determine the absorption coefficient in lead of gamma radiation from the given source.</p>
+        </div>
+        <h2 class="sub-h">Learning outcomes</h2>
+        <p class="lede">By the end of this session, students should be able to:</p>
+        <ul class="outcomes">
+          <li>Know the interaction of radiation with matter.</li>
+          <li>Understand how charged particles interact with matter.</li>
+          <li>Learn how materials are effective in shielding radiation.</li>
+        </ul>
+        <h2 class="sub-h">Medical perspectives</h2>
+        <div class="med-row">
+          <div class="med"><svg viewBox="0 0 80 80" aria-hidden="true" class="med-ic" id="med-ic-1"></svg><div><h3>X-ray imaging and CT</h3><p>An X-ray image is a map of how much radiation each path through the body absorbs. CT measures this attenuation from many angles and rebuilds it slice by slice.</p></div></div>
+          <div class="med"><svg viewBox="0 0 80 80" aria-hidden="true" class="med-ic" id="med-ic-2"></svg><div><h3>Tissues absorb differently</h3><p>Bone, soft tissue, fat and air-filled lung have different attenuation coefficients, which is why they show up as different shades.</p></div></div>
+          <div class="med"><svg viewBox="0 0 80 80" aria-hidden="true" class="med-ic" id="med-ic-3"></svg><div><h3>Radiation therapy planning</h3><p>Planning a treatment means predicting how a beam weakens as it passes through tissue, and how much lead or other shielding protects staff and healthy organs.</p></div></div>
+        </div>
+        <div class="page-end"><button type="button" class="btn-next" data-next>Next →</button></div>
+      </div>
+    </section>
+
+    <!-- ============ THEORY ============ -->
+    <section class="view" id="view-theory" data-title="Theory">
+      <div class="sheet">
+        <h1 class="page-h">Theory</h1>
+        <p class="lede"><strong>Gamma rays</strong> are high-energy photons emitted by unstable nuclei. They carry no charge, so they do not slow down gradually like a charged particle. Each photon travels until it has one interaction that removes it from the beam, or it passes straight through.</p>
+
+        <h2 class="sub-h">How gamma photons interact with matter</h2>
+        <div class="int-row">
+          <figure class="int"><svg viewBox="0 0 240 150" id="int-pe" role="img" aria-label="Photoelectric effect: the photon disappears and an electron is ejected"></svg><figcaption><b>Photoelectric effect</b><span>The photon gives all its energy to an inner electron, which is ejected. The photon disappears. Most likely at low energy and in high-Z materials such as lead (it rises roughly as Z³).</span></figcaption></figure>
+          <figure class="int"><svg viewBox="0 0 240 150" id="int-co" role="img" aria-label="Compton scattering: the photon gives part of its energy to an electron and leaves at an angle"></svg><figcaption><b>Compton scattering</b><span>The photon hands part of its energy to an outer electron and carries on at an angle with less energy. Important at medium energies, including the 662 keV of Cs-137.</span></figcaption></figure>
+          <figure class="int"><svg viewBox="0 0 240 150" id="int-pp" role="img" aria-label="Pair production: near a nucleus the photon becomes an electron and a positron"></svg><figcaption><b>Pair production</b><span>Near a nucleus a photon above 1.022 MeV can turn into an electron and a positron. It needs at least twice the electron rest energy (2 × 0.511 MeV).</span></figcaption></figure>
+        </div>
+        <div class="side-note wide-note"><div class="sn-k">Charged particles</div><p>Alpha and beta particles are charged, so they interact all the time, pulling on electrons along their path and ionising atoms as they go. They lose energy steadily and stop within a definite <strong>range</strong>: alphas in a few centimetres of air, betas in a few millimetres of aluminium. Gamma photons are <em>indirectly</em> ionising: each interaction sets a fast electron free, and that electron does the ionising. This is also how a Geiger–Müller tube detects gamma rays.</p></div>
+
+        <h2 class="sub-h">Exponential attenuation</h2>
+        <p class="lede">Every thin layer of lead removes the same <em>fraction</em> of the photons that reach it. Equal steps of thickness therefore divide the intensity by equal factors, which gives an exponential fall.</p>
+        <div class="eq-hero">I = I<sub>0</sub> e<sup>−μx</sup></div>
+        <div class="terms three">
+          <div class="term"><div class="term-k">I<sub>0</sub></div><p>count rate with no absorber, after background is removed (counts/min)</p></div>
+          <div class="term"><div class="term-k">I</div><p>count rate through a thickness x of lead, after background is removed (counts/min)</p></div>
+          <div class="term"><div class="term-k">μ</div><p>linear absorption (attenuation) coefficient of the absorber, in cm<sup>−1</sup></p></div>
+        </div>
+
+        <div class="explorer">
+          <div class="ex-view"><svg id="att-svg" viewBox="0 0 640 300" role="img" aria-label="Beam passing through a lead slab, with a plot of I over I zero against thickness"></svg></div>
+          <div class="ex-side">
+            <div class="ctl">
+              <label for="att-x"><span>Lead thickness x</span><b id="att-xv">0.40 cm</b></label>
+              <input type="range" id="att-x" min="0" max="2" step="0.05" value="0.4">
+            </div>
+            <div class="ex-out" id="att-out" aria-live="polite"></div>
+            <p class="ex-note">Example value: μ = 1.20 cm<sup>−1</sup> for 662 keV photons in lead.</p>
+          </div>
+        </div>
+
+        <h2 class="sub-h">A straight-line graph</h2>
+        <p class="lede">Taking natural logarithms turns the curve into a straight line through the origin:</p>
+        <div class="eq-steps">
+          <span>I<sub>0</sub> / I = e<sup>μx</sup></span><span class="arr">→</span><span class="eq-big">ln(I<sub>0</sub> / I) = μx</span>
+        </div>
+        <p class="lede">So ln(I<sub>0</sub>/I) is plotted on the <strong>y-axis</strong> against thickness x on the <strong>x-axis</strong>. The slope of the line is μ, in cm<sup>−1</sup>.</p>
+        <div class="two-notes">
+          <div class="side-note"><div class="sn-k">Half-value layer</div><p>The thickness that halves the intensity. Setting I = I<sub>0</sub>/2 gives <strong>HVL = ln 2 / μ = 0.693 / μ</strong>. With μ = 1.20 cm<sup>−1</sup>, HVL ≈ 0.58 cm of lead.</p></div>
+          <div class="side-note"><div class="sn-k">Why lead shields well</div><p>Lead is dense (11.3 g/cm³) and has a high atomic number (Z = 82), so it has many electrons per centimetre and a strong photoelectric effect. Dividing μ by density gives the mass attenuation coefficient μ/ρ in cm²/g, which compares materials fairly.</p></div>
+        </div>
+
+        <h2 class="sub-h">The Geiger–Müller counter</h2>
+        <div class="gm-grid">
+          <figure class="gm-fig"><svg id="gm-svg" viewBox="0 0 460 220" role="img" aria-label="Cross-section of a Geiger–Müller tube: a thin window, a gas-filled cylinder as cathode and a central wire anode"></svg></figure>
+          <div class="gm-text">
+            <p>A GM tube is a gas-filled cylinder with a thin wire along its axis held at a high positive voltage. A gamma photon frees an electron in the wall or the gas; the electron ionises the gas, and near the wire the field is strong enough to set off an <strong>avalanche</strong> along the whole tube. Each avalanche gives one pulse, one count, whatever the energy of the photon.</p>
+            <p>The scaler counts the pulses for a preset time. After each pulse the tube needs a short <strong>dead time</strong> (around 100 µs) before it can count again, which matters only at very high rates.</p>
+          </div>
+        </div>
+        <div class="explorer plateau">
+          <div class="ex-view"><svg id="pl-svg" viewBox="0 0 640 300" role="img" aria-label="Count rate against tube voltage: no counts below the starting voltage, a flat plateau, then a steep rise into continuous discharge"></svg></div>
+          <div class="ex-side">
+            <div class="ctl">
+              <label for="pl-v"><span>Tube voltage</span><b id="pl-vv">500 V</b></label>
+              <input type="range" id="pl-v" min="300" max="700" step="10" value="500">
+            </div>
+            <div class="ex-out" id="pl-out" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="note">The operating voltage is chosen on the flat <strong>plateau</strong>, here about 500 V, where a small drift in voltage hardly changes the count rate.</p>
+
+        <h2 class="sub-h">Background and random counts</h2>
+        <div class="two-notes">
+          <div class="side-note"><div class="sn-k">Background radiation</div><p>Even with no source nearby the tube counts cosmic rays and natural radioactivity in rocks, building materials and air, typically a few tens of counts per minute. This <strong>background</strong> I<sub>BG</sub> is measured first and subtracted from every reading, so that I<sub>0</sub> and I describe the source alone.</p></div>
+          <div class="side-note"><div class="sn-k">Counts are random</div><p>Radioactive decay is random, so repeated one-minute counts differ. For a count N the natural spread is about <strong>√N</strong> (Poisson statistics): about ±52 for 2700 counts. Repeating each count three times and averaging reduces this scatter.</p></div>
+        </div>
+        <div class="poisson">
+          <div class="po-view"><svg id="po-svg" viewBox="0 0 640 210" role="img" aria-label="Dot plot of repeated one-minute counts around a mean of about 2684"></svg></div>
+          <div class="po-side">
+            <p>Repeated one-minute counts through 0.2 cm of lead (example, true mean 2689 counts/min).</p>
+            <div class="read-actions"><button type="button" class="btn-main" id="po-add">Count one minute</button><button type="button" class="btn-quiet" id="po-ten">Count ten</button><button type="button" class="btn-quiet" id="po-clear">Clear</button></div>
+            <div class="ex-out sm" id="po-out" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="page-end"><button type="button" class="btn-next" data-next>Next →</button></div>
+      </div>
+    </section>
+
+    <!-- ============ METHOD ============ -->
+    <section class="view" id="view-method" data-title="Method">
+      <div class="sheet wide">
+        <h1 class="page-h">Method</h1>
+        <h2 class="sub-h first">Apparatus</h2>
+        <div class="app-grid" id="app-grid"></div>
+
+        <h2 class="sub-h">Steps</h2>
+        <div class="method-wrap">
+          <ol class="steps" id="steps">
+            <li><button type="button" class="step" aria-pressed="true"><span class="sn">1</span><span>Connect the Geiger–Müller tube to the counter (scaler).</span></button></li>
+            <li><button type="button" class="step"><span class="sn">2</span><span>Raise the voltage gradually to the operating voltage, about 500 V.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">3</span><span>With the source in its lead container, record the background counts for one minute, three times, and average them: I<sub>BG</sub>.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">4</span><span>Place the source at a fixed distance from the tube with no absorber. Record three one-minute counts and average them: I<sub>0av</sub>.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">5</span><span>Subtract the background: I<sub>0</sub> = I<sub>0av</sub> − I<sub>BG</sub>.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">6</span><span>Place lead absorbers of different thickness x midway between source and tube. Record three counts for each thickness and average them: I<sub>av</sub>.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">7</span><span>Subtract the background for each thickness: I = I<sub>av</sub> − I<sub>BG</sub>.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">8</span><span>Calculate ln(I<sub>0</sub>/I) for each thickness.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">9</span><span>Plot ln(I<sub>0</sub>/I) on the y-axis against x on the x-axis.</span></button></li>
+            <li><button type="button" class="step"><span class="sn">10</span><span>Find the slope of the straight line: it equals the absorption coefficient μ.</span></button></li>
+          </ol>
+          <div class="step-view">
+            <div class="step-fig" id="step-fig"></div>
+            <p class="step-cap" id="step-cap"></p>
+          </div>
+        </div>
+
+        <aside class="tips safety">
+          <div class="tips-label">Safety</div>
+          <ul>
+            <li><strong>Time, distance, shielding.</strong> Keep the source out of its container for as short a time as possible, stay back from it, and keep lead between the source and people.</li>
+            <li><strong>Handle the source with tongs only</strong>, never with fingers, and hold it at arm's length.</li>
+            <li><strong>Never point the source at anyone</strong>, including the eyes, and never look straight down the open face of the source.</li>
+            <li><strong>Return the source to its lead container</strong> as soon as the counts are done.</li>
+            <li><strong>Lead is toxic.</strong> Handle the sheets with gloves or wash hands afterwards; no eating or drinking at the bench.</li>
+          </ul>
+        </aside>
+        <aside class="tips">
+          <div class="tips-label">Precautions for good results</div>
+          <ul>
+            <li><strong>Work on the plateau.</strong> Raise the voltage slowly and do not go above the plateau: continuous discharge can damage the tube.</li>
+            <li><strong>Keep the geometry fixed.</strong> The source-to-tube distance must not change between readings; only the absorber changes.</li>
+            <li><strong>Absorbers midway and square to the beam,</strong> so the photons cross exactly the thickness x.</li>
+            <li><strong>Repeat and average.</strong> Three one-minute counts for every setting, because single counts scatter by about √N.</li>
+            <li><strong>Background first.</strong> Measure it with the source safely in its container, and subtract it from every average.</li>
+            <li><strong>Keep other sources away</strong> from the bench so the background stays the same throughout.</li>
+          </ul>
+        </aside>
+        <div class="page-end"><button type="button" class="btn-next" data-next>Next →</button></div>
+      </div>
+    </section>
+
+    <!-- ============ FORMULA AND RESULTS ============ -->
+    <section class="view" id="view-results" data-title="Formula and results">
+      <div class="sheet">
+        <h1 class="page-h">Formula and results</h1>
+        <div class="formula-pair">
+          <div class="formula-card"><div class="big-eq">ln<span class="paren">(</span><span class="frac"><span>I<sub>0</sub></span><span>I</span></span><span class="paren">)</span> = μx</div><p>slope of ln(I<sub>0</sub>/I) against x is μ, in cm<sup>−1</sup></p></div>
+          <div class="formula-card"><div class="big-eq">HVL = <span class="frac"><span>0.693</span><span>μ</span></span></div><p>half-value layer, cm</p></div>
+        </div>
+
+        <h2 class="sub-h">Worked example</h2>
+        <p class="lede">Example readings for a Cs-137 source (662 keV gamma rays) at a fixed distance from the tube, with the tube at 500 V. All counts are for one minute.</p>
+        <div class="pre-tables">
+          <div class="mini-t">
+            <div class="obs-head"><span>Background, no source</span></div>
+            <table class="obs hand"><thead><tr><th>I<sub>1</sub><span class="u">counts/min</span></th><th>I<sub>2</sub><span class="u">counts/min</span></th><th>I<sub>3</sub><span class="u">counts/min</span></th><th>I<sub>BG</sub><span class="u">counts/min</span></th></tr></thead>
+            <tbody><tr><td>24</td><td>27</td><td>21</td><td>24</td></tr></tbody></table>
+          </div>
+          <div class="mini-t">
+            <div class="obs-head"><span>Source, no absorber (x = 0)</span></div>
+            <table class="obs hand"><thead><tr><th>I<sub>1</sub><span class="u">counts/min</span></th><th>I<sub>2</sub><span class="u">counts/min</span></th><th>I<sub>3</sub><span class="u">counts/min</span></th><th>I<sub>0av</sub><span class="u">counts/min</span></th></tr></thead>
+            <tbody><tr><td>3410</td><td>3381</td><td>3445</td><td>3412</td></tr></tbody></table>
+          </div>
+        </div>
+        <p class="eq-note">I<sub>0</sub> = I<sub>0av</sub> − I<sub>BG</sub> = 3412 − 24 = 3388 counts/min</p>
+        <div class="obs-head"><span>Observation</span><span>I<sub>BG</sub> = 24 · I<sub>0</sub> = 3388 counts/min</span></div>
+        <div class="table-wrap">
+          <table class="obs hand" id="res-table">
+            <thead><tr><th>S.No</th><th>x<span class="u">cm</span></th><th>I<sub>1</sub><span class="u">counts/min</span></th><th>I<sub>2</sub><span class="u">counts/min</span></th><th>I<sub>3</sub><span class="u">counts/min</span></th><th>I<sub>av</sub><span class="u">counts/min</span></th><th>I = I<sub>av</sub> − I<sub>BG</sub><span class="u">counts/min</span></th><th>I<sub>0</sub> / I<span class="u">no unit</span></th><th>ln(I<sub>0</sub> / I)<span class="u">no unit</span></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h2 class="sub-h">Graph</h2>
+        <p class="lede">ln(I<sub>0</sub>/I) goes on the <strong>y-axis</strong> and x on the <strong>x-axis</strong>, so the slope is μ in cm<sup>−1</sup>. The manual's wording "x versus ln(I<sub>0</sub>/I)" means this same plot.</p>
+        <div class="graph-wrap"><svg id="res-graph" viewBox="0 0 720 440" role="img" aria-label="Graph of ln of I zero over I against thickness x: five points on a straight line through the origin with a slope triangle"></svg></div>
+        <p class="note">Slope from two points well apart on the best-fit line, not from two data points.</p>
+
+        <h2 class="sub-h">Calculation</h2>
+        <div class="calc">
+          <div class="calc-step"><span class="cs-n">1</span><div><strong>Background</strong>
+            <span class="eq-line">I<sub>BG</sub> = (24 + 27 + 21) ÷ 3 = <b>24 counts/min</b></span></div></div>
+          <div class="calc-step"><span class="cs-n">2</span><div><strong>Count rate with no absorber</strong>
+            <span class="eq-line">I<sub>0</sub> = I<sub>0av</sub> − I<sub>BG</sub> = 3412 − 24 = <b>3388 counts/min</b></span></div></div>
+          <div class="calc-step"><span class="cs-n">3</span><div><strong>One row</strong>, x = 0.6 cm
+            <span class="eq-line">I = 1677 − 24 = 1653 counts/min</span>
+            <span class="eq-line">ln(I<sub>0</sub>/I) = ln(3388 ÷ 1653) = ln(2.050) = <b>0.718</b></span></div></div>
+          <div class="calc-step hi"><span class="cs-n">4</span><div><strong>Slope</strong> from the line, points (0.10, 0.12) and (0.90, 1.08)
+            <span class="eq-line">μ = (y<sub>2</sub> − y<sub>1</sub>) ÷ (x<sub>2</sub> − x<sub>1</sub>) = (1.08 − 0.12) ÷ (0.90 − 0.10) = 0.96 ÷ 0.80 = <b>1.20 cm<sup>−1</sup></b></span></div></div>
+          <div class="calc-step"><span class="cs-n">5</span><div><strong>Half-value layer</strong>
+            <span class="eq-line">HVL = 0.693 ÷ μ = 0.693 ÷ 1.20 = <b>0.58 cm</b></span></div></div>
+          <div class="calc-step result"><span class="cs-n">✓</span><div><strong>Result</strong>
+            <span class="eq-line">The absorption coefficient in lead of gamma radiation from the given source μ ≈ <b>1.20 cm<sup>−1</sup></b></span>
+            <span class="sub">about 0.58 cm of lead halves the count rate (example values)</span></div></div>
+        </div>
+
+        <h2 class="sub-h">Common slips</h2>
+        <div class="slips">
+          <div class="slip"><h3>Background not subtracted</h3><p>Using 3412 instead of 3388 for I<sub>0</sub>, and I<sub>av</sub> instead of I, slightly bends the line; the error grows as the count rate falls towards the background.</p></div>
+          <div class="slip"><h3>log<sub>10</sub> instead of ln</h3><p>log<sub>10</sub>(2.050) = 0.312, not 0.718. Every value is 2.303 times too small, and so is μ.</p></div>
+          <div class="slip"><h3>Ratio upside down</h3><p>ln(I/I<sub>0</sub>) = −0.718. A negative logarithm means I and I<sub>0</sub> were swapped.</p></div>
+          <div class="slip"><h3>Slope upside down</h3><p>Δx ÷ Δy = 0.80 ÷ 0.96 = 0.83 cm. The slope is rise over run: Δy ÷ Δx.</p></div>
+          <div class="slip"><h3>Axes swapped</h3><p>Plotting x on the y-axis gives a slope of 1/μ. Keep ln(I<sub>0</sub>/I) on the y-axis.</p></div>
+          <div class="slip"><h3>HVL upside down</h3><p>μ ÷ 0.693 = 1.73 has the wrong unit. HVL = 0.693 ÷ μ, in cm.</p></div>
+        </div>
+        <div class="page-end"><button type="button" class="btn-next" data-next>Next →</button></div>
+      </div>
+    </section>
+
+    <!-- ============ MCQs ============ -->
+    <section class="view" id="view-mcq" data-title="MCQs">
+      <div class="sheet">
+        <h1 class="page-h">Check understanding</h1>
+        <div class="mcq-bar">
+          <div class="mcq-score" id="mcq-score">0 correct</div>
+          <button type="button" class="btn-quiet" id="mcq-reset">Reset &amp; reshuffle</button>
+        </div>
+        <ol class="mcq-list" id="mcq-list"></ol>
+        <div class="page-end"><button type="button" class="btn-next" data-next>Next →</button></div>
+      </div>
+    </section>
+
+    <!-- ============ PRACTICAL ============ -->
+    <section class="view" id="view-practical" data-title="Practical">
+      <div class="sheet wide">
+        <h1 class="page-h">Practical</h1>
+        <div class="prac-intro">
+          <p class="lede">Raise the tube voltage to the plateau, count the background, then move the source into its holder with the tongs and count with no lead and with lead sheets of increasing thickness. Record three one-minute counts each time, plot ln(I<sub>0</sub>/I) against x and find μ.</p>
+          <button type="button" class="btn-tut" id="tut-start"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor"/></svg>Start tutorial</button>
+        </div>
+        <div class="safety-strip" role="note"><b>Safety</b> Time, distance, shielding: keep the source out of its lead container only while counting, move it with tongs, never point it at anyone, and return it to its container at the end.</div>
+
+        <div class="rig-frame" id="rig-frame">
+          <svg id="rig" viewBox="0 0 1000 660" role="img" aria-label="Bench with a lead source container and tongs, a source holder, an absorber slot and a Geiger–Müller tube on a track, a rack of numbered lead sheets and a scaler with a high-voltage knob"></svg>
+        </div>
+        <div class="rig-msg" id="rig-msg" aria-live="polite"></div>
+
+        <div class="prac-mid">
+          <div class="panel" id="ctl-panel">
+            <h2 class="panel-h">Scaler controls</h2>
+            <p class="ctl-help"><b>HV knob:</b> drag it round, scroll over it, or select it and use the arrow keys. The buttons below step the voltage.</p>
+            <div class="ctl-btns" role="group" aria-label="Step the tube voltage">
+              <button type="button" class="btn-quiet sm" data-hv="-50">− 50 V</button>
+              <button type="button" class="btn-quiet sm" data-hv="-10">− 10 V</button>
+              <button type="button" class="btn-quiet sm" data-hv="10">+ 10 V</button>
+              <button type="button" class="btn-quiet sm" data-hv="50">+ 50 V</button>
+            </div>
+            <div class="ctl-row">
+              <label for="c-mode">Count time</label>
+              <select id="c-mode">
+                <option value="1">60 s, real time</option>
+                <option value="10">60 s, fast ×10 (6 s)</option>
+                <option value="30" selected>60 s, fast ×30 (2 s)</option>
+              </select>
+            </div>
+            <p class="ctl-help small">The fast settings compress the clock for the simulation only. The scaler still counts for a full 60 s of simulated time and reports counts per minute.</p>
+            <div class="ctl-btns">
+              <button type="button" class="toggle" id="c-sound" aria-pressed="false"><span class="tg-track" aria-hidden="true"><span class="tg-knob"></span></span>Click sound</button>
+            </div>
+            <div class="status" id="status"></div>
+          </div>
+          <div class="panel" id="rec-panel">
+            <div class="panel-head"><h2 class="panel-h">Record</h2><span class="panel-tag" id="rec-target"></span></div>
+            <p class="ctl-help">After a full count, <b>Record count</b> copies the scaler reading into the right place for the present set-up. Readings can also be typed straight into the table.</p>
+            <div class="ctl-btns">
+              <button type="button" class="btn-main" id="btn-rec">Record count</button>
+              <button type="button" class="btn-quiet sm" id="btn-undo">Delete last reading</button>
+            </div>
+            <p class="rec-msg" id="rec-msg" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="prac-lower">
+          <div class="panel" id="tbl-panel">
+            <div class="panel-head"><h2 class="panel-h">Observation</h2><span class="panel-tag mono">all counts per minute</span></div>
+            <div class="pre-tables">
+              <div class="mini-t" id="bg-block">
+                <div class="obs-head"><span>Background, no source</span></div>
+                <table class="obs small"><thead><tr><th>I<sub>1</sub></th><th>I<sub>2</sub></th><th>I<sub>3</sub></th><th>I<sub>BG</sub></th></tr></thead>
+                <tbody><tr id="bg-row"><td><input class="cell" data-k="bg" data-i="0" inputmode="numeric" autocomplete="off" aria-label="Background reading 1"></td><td><input class="cell" data-k="bg" data-i="1" inputmode="numeric" autocomplete="off" aria-label="Background reading 2"></td><td><input class="cell" data-k="bg" data-i="2" inputmode="numeric" autocomplete="off" aria-label="Background reading 3"></td><td><input class="cell avg" data-k="bg" data-i="avg" inputmode="decimal" autocomplete="off" aria-label="Background average"></td></tr></tbody></table>
+              </div>
+              <div class="mini-t" id="i0-block">
+                <div class="obs-head"><span>Source, no absorber (x = 0)</span></div>
+                <table class="obs small"><thead><tr><th>I<sub>1</sub></th><th>I<sub>2</sub></th><th>I<sub>3</sub></th><th>I<sub>0av</sub></th><th>I<sub>0</sub></th></tr></thead>
+                <tbody><tr id="i0-row"><td><input class="cell" data-k="i0" data-i="0" inputmode="numeric" autocomplete="off" aria-label="No-absorber reading 1"></td><td><input class="cell" data-k="i0" data-i="1" inputmode="numeric" autocomplete="off" aria-label="No-absorber reading 2"></td><td><input class="cell" data-k="i0" data-i="2" inputmode="numeric" autocomplete="off" aria-label="No-absorber reading 3"></td><td><input class="cell avg" data-k="i0" data-i="avg" inputmode="decimal" autocomplete="off" aria-label="No-absorber average"></td><td class="calc-c" id="i0-val">—</td></tr></tbody></table>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="obs small" id="p-table">
+                <thead><tr><th>S.No</th><th>x<span class="u">cm</span></th><th>I<sub>1</sub></th><th>I<sub>2</sub></th><th>I<sub>3</sub></th><th>I<sub>av</sub></th><th>I = I<sub>av</sub> − I<sub>BG</sub></th><th>I<sub>0</sub> / I</th><th>ln(I<sub>0</sub> / I)</th></tr></thead>
+                <tbody id="p-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel" id="graph-panel">
+            <div class="panel-head"><h2 class="panel-h">Graph</h2><span class="panel-tag">ln(I<sub>0</sub>/I) on y, x on x · drag the two round handles onto a best-fit line</span></div>
+            <div class="graph-wrap live"><svg id="p-graph" viewBox="0 0 720 460" role="img" aria-label="Graph of ln of I zero over I against x with a movable line"></svg></div>
+            <div class="graph-foot">
+              <div class="g-read" id="g-read" aria-live="polite"></div>
+              <button type="button" class="btn-quiet sm" id="g-reset">Reset line</button>
+            </div>
+          </div>
+
+          <div class="panel" id="calc-panel">
+            <h2 class="panel-h">Calculation</h2>
+            <div class="calc-rows">
+              <div class="cr" id="cr-bg"><label for="in-bg">Background I<sub>BG</sub> = (I<sub>1</sub> + I<sub>2</sub> + I<sub>3</sub>) ÷ 3 <span class="u">counts/min</span></label><input type="text" inputmode="decimal" id="in-bg" autocomplete="off"><div class="cr-work" id="w-bg"></div></div>
+              <div class="cr" id="cr-i0"><label for="in-i0">I<sub>0</sub> = I<sub>0av</sub> − I<sub>BG</sub> <span class="u">counts/min</span></label><input type="text" inputmode="decimal" id="in-i0" autocomplete="off"><div class="cr-work" id="w-i0"></div></div>
+              <div class="cr" id="cr-ln"><label for="in-ln">ln(I<sub>0</sub>/I) for row <select id="in-row" aria-label="Table row"></select></label><input type="text" inputmode="decimal" id="in-ln" autocomplete="off"><div class="cr-sub" id="ln-sub">natural logarithm, no unit</div><div class="cr-work" id="w-ln"></div></div>
+              <div class="cr" id="cr-mu"><label for="in-mu">Slope μ = (y<sub>2</sub> − y<sub>1</sub>) ÷ (x<sub>2</sub> − x<sub>1</sub>) <span class="u">cm<sup>−1</sup></span></label><input type="text" inputmode="decimal" id="in-mu" autocomplete="off"><div class="cr-sub" id="mu-sub">two points on the line from the graph</div><div class="cr-work" id="w-mu"></div></div>
+              <div class="cr" id="cr-hvl"><label for="in-hvl">Half-value layer HVL = 0.693 ÷ μ <span class="u">cm</span></label><input type="text" inputmode="decimal" id="in-hvl" autocomplete="off"><div class="cr-work" id="w-hvl"></div></div>
+            </div>
+            <div class="calc-actions">
+              <button type="button" class="btn-main" id="btn-check">Check</button>
+            </div>
+            <div class="check-msg" id="check-msg" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="prac-foot">
+          <button type="button" class="btn-quiet" id="btn-reset">Start over</button>
+        </div>
+
+        <div class="extras" id="extras">
+          <div class="extras-panel" id="extras-panel" role="region" aria-label="Optional extras">
+            <a href="https://grokipedia.com/page/Attenuation_coefficient" target="_blank" rel="noopener">Grokipedia: Attenuation coefficient</a>
+            <a href="https://grokipedia.com/page/Half-value_layer" target="_blank" rel="noopener">Grokipedia: Half-value layer</a>
+            <a href="https://grokipedia.com/page/Geiger_counter" target="_blank" rel="noopener">Grokipedia: Geiger counter</a>
+            <a href="https://grokipedia.com/page/Gamma_ray" target="_blank" rel="noopener">Grokipedia: Gamma ray</a>
+            <a href="https://www.youtube.com/watch?v=wwkbqXzaRN8" target="_blank" rel="noopener">Video: Absorption of Gamma Ray using different Lead (Pb) absorbers</a>
+          </div>
+          <button type="button" class="extras-toggle" id="extras-toggle" aria-expanded="false" aria-controls="extras-panel">Optional extras</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="tut-bar" id="tut-bar" hidden role="status" aria-live="polite">
+  <div class="tut-main"><div class="tut-title" id="tut-title"></div><div class="tut-text" id="tut-text"></div><div class="tut-f" id="tut-f"></div></div>
+  <div class="tut-ctl">
+    <button type="button" class="tut-btn tut-pause" id="tut-pause" aria-pressed="false" title="Pause (Space)"><svg class="ti" viewBox="0 0 16 16" aria-hidden="true"><path class="i-pause" d="M4 2.5h2.8v11H4zM9.2 2.5H12v11H9.2z"/><path class="i-play" d="M4.5 2.3v11.4L13.2 8z"/></svg><span class="tl">Pause</span></button>
+    <label class="tut-speed"><span>Speed</span><select id="tut-speed" aria-label="Tutorial speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label>
+    <button type="button" class="tut-btn" id="tut-skip">Skip step</button>
+    <button type="button" class="tut-btn stop" id="tut-stop">Stop</button>
+  </div>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>
