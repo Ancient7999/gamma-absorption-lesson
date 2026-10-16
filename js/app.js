@@ -459,8 +459,8 @@
     P.lineG = el('g', null, g); P.ptG = el('g', null, g); P.topG = el('g', null, g);
     P.points = function (pts, n) {
       P.ptG.innerHTML = '';
-      pts.slice(0, n == null ? pts.length : n).forEach(p => {
-        el('circle', { cx: P.X(p.x), cy: P.Y(p.y), r: 6, fill: '#fff', stroke: C.lead2, 'stroke-width': 2 }, P.ptG);
+      pts.slice(0, n == null ? pts.length : n).forEach((p, i) => {
+        el('circle', { class: 'gpt', 'data-i': i, cx: P.X(p.x), cy: P.Y(p.y), r: 6, fill: '#fff', stroke: C.lead2, 'stroke-width': 2 }, P.ptG);
         el('path', { d: `M${P.X(p.x) - 3.5} ${P.Y(p.y)} h7 M${P.X(p.x)} ${P.Y(p.y) - 3.5} v7`, stroke: C.lead2, 'stroke-width': 1.5 }, P.ptG);
       });
     };
@@ -475,7 +475,7 @@
       const clipY = (yy) => clamp(yy, 0, P.ymax);
       if (y0 < 0 || y0 > P.ymax) { x0 = (clipY(y0) - c) / m; y0 = clipY(y0); }
       if (y1 < 0 || y1 > P.ymax) { x1 = (clipY(y1) - c) / m; y1 = clipY(y1); }
-      el('line', { x1: P.X(x0), y1: P.Y(y0), x2: P.X(x1), y2: P.Y(y1), stroke: C.amber, 'stroke-width': 2.4, 'stroke-linecap': 'round' }, P.lineG);
+      el('line', { class: 'fit-line', x1: P.X(x0), y1: P.Y(y0), x2: P.X(x1), y2: P.Y(y1), stroke: C.amber, 'stroke-width': 2.4, 'stroke-linecap': 'round' }, P.lineG);
       if (tri) {
         const ax = P.X(A.x), ay = P.Y(A.y), bx = P.X(Bp.x), by = P.Y(Bp.y);
         el('path', { d: `M${ax} ${ay} L${bx} ${ay} L${bx} ${by}`, fill: 'none', stroke: C.lead, 'stroke-width': 1.6, 'stroke-dasharray': '6 4' }, P.lineG);
@@ -1144,12 +1144,12 @@
       r.shown = n; showCount(n);
       SC.time.textContent = Math.floor(p * 60 + 1e-9) + ' / 60';
       // photons crossing the bench while counting with the source out
-      if (SRC.loc === 'holder' && !reduced && Math.random() < .5) spawnPhoton();
+      if (SRC.loc === 'holder' && !reduced && !TC.paused && Math.random() < .5) spawnPhoton();
       if (p >= 1) { finishRun(); return; }
       requestAnimationFrame(tick);
     }
     function finishRun() {
-      const r = st.run; st.counting = false; r.complete = true; st.lastRun = r; runsLog.push(r);
+      const r = st.run; st.counting = false; clearPhotons(); r.complete = true; st.lastRun = r; runsLog.push(r);
       SC.time.textContent = '60 / 60';
       if (r.V > V_TOP) say(`${r.N} counts: the tube was in continuous discharge at ${r.V} V. This is not a real count; turn the HV back to about 500 V.`, 'bad');
       else if (r.V < V_PLATEAU) say(`${r.N} counts in 60 s at ${r.V} V. Below the plateau the count depends on voltage; raise the HV to about 500 V first.`, 'warn');
@@ -1177,6 +1177,7 @@
       requestAnimationFrame(fade);
     })();
     const photons = [];
+    function clearPhotons() { photons.forEach(p => p.c.remove()); photons.length = 0; }
     function spawnPhoton() {
       if (photons.length > 14) return;
       const y = BEAM + (Math.random() - .5) * 18, x = stackX();
@@ -1545,6 +1546,12 @@
       else if (isFinite(muUse) && near(vH, muUse * Math.LN2, .03)) { mark(inHvl, false); notes.push('Divide 0.693 by μ rather than multiplying.'); }
       else if (isFinite(muUse) && near(vH, Math.log10(2) / muUse, .03)) { mark(inHvl, false); notes.push('Use ln 2 = 0.693, not log₁₀ 2 = 0.301.'); }
       else { mark(inHvl, false); notes.push('Check the half-value layer: HVL = 0.693 ÷ μ.'); }
+      const okC = i => i.classList.contains('okf');
+      setWork('w-bg', okC(inBg) ? workBg() : '');
+      setWork('w-i0', okC(inI0) ? workI0() : '');
+      if (okC(inLn)) setWork('w-ln', workLn(ri), ri); else setWork('w-ln', '');
+      setWork('w-mu', okC(inMu) && graphPoints().length && Math.abs(H.B.x - H.A.x) > 1e-6 ? workMu() : '');
+      setWork('w-hvl', okC(inHvl) ? workHvl(vMu > 0 ? vMu : muUse) : '');
       if (!notes.length) {
         const dev = Math.abs(vMu - MU) / MU;
         chk.className = 'check-msg ok';
@@ -1557,10 +1564,176 @@
     $('btn-check').addEventListener('click', check);
     calcIns.forEach(i => i.addEventListener('input', () => i.classList.remove('flag', 'okf')));
 
+    /* ---------- traceable calculation: each symbol and number explains itself and points to its source ---------- */
+    const SUBD = '₀₁₂₃₄₅₆₇₈₉';
+    const plain = h => String(h).replace(/<sub>(\d+)<\/sub>/g, (m, s) => s.replace(/\d/g, d => SUBD[+d])).replace(/<sub>([^<]*)<\/sub>/g, (m, s) => s === 'av' || s === '0av' ? s.replace('0', '₀') : '_' + s).replace(/<sup>−1<\/sup>/g, '⁻¹').replace(/<[^>]+>/g, '');
+    function cellOf(k, i) { return document.querySelector(`#${k}-row input.cell[data-i="${i}"]`); }
+    function rowCell(ri, c) { const tr = document.querySelector(`#p-tbody tr[data-ri="${ri}"]`); return tr ? tr.querySelectorAll('td.calc-c')[c] : null; }
+    function rowInput(ri, i) { return document.querySelector(`#p-tbody input.cell[data-k="row${ri}"][data-i="${i}"]`); }
+    const filled = e => !!e && (e.tagName === 'INPUT' ? e.value.trim() !== '' : !!e.textContent.trim() && e.textContent.trim() !== '—');
+    function ptEl(ri) { const dv = derived(); let k = -1; for (let i = 0; i <= ri && i < dv.rows.length; i++) if (isFinite(dv.rows[i].ln)) k++; return k < 0 || !isFinite((dv.rows[ri] || {}).ln) ? null : gsvg.querySelector(`.gpt[data-i="${k}"]`); }
+    const handleEl = i => graphPoints().length ? gsvg.querySelectorAll('.gh')[i] || null : null;
+    const lineEl = () => graphPoints().length ? gsvg.querySelector('.fit-line') : null;
+    const wNum = (box, ref) => { const b = $(box); return b ? b.querySelector(`.num[data-ref="${ref}"]`) : null; };
+    const lSym = (row, key) => document.querySelector(`#${row} label .sym[data-sym="${key}"]`);
+    const IBGs = '<i>I</i><sub>BG</sub>', I0s = '<i>I</i><sub>0</sub>', I0avs = '<i>I</i><sub>0av</sub>', Iavs = '<i>I</i><sub>av</sub>';
+    function lnRow(node) { const w = $('w-ln'); if (node && w.contains(node) && w.dataset.ri !== undefined && w.dataset.ri !== '') return +w.dataset.ri; return selRow.value === '' ? -1 : +selRow.value; }
+    function INFO(k, node) {
+      const ri = lnRow(node), rx = D.rows[ri] ? D.rows[ri].x.toFixed(2) : '…', rn = ri >= 0 ? ri + 1 : '…';
+      const bgN = ['first', 'second', 'third'];
+      const m = /^bg(\d)$/.exec(k);
+      if (m) { const i = +m[1]; return { title: `<i>I</i><sub>${i + 1}</sub>: background count ${i + 1}`, nm: `<i>I</i><sub>${i + 1}</sub>, the ${bgN[i]} one-minute background count`, where: `Counted with the source shut in its lead container. Background table, column I<sub>${i + 1}</sub>.`, src: () => cellOf('bg', i) }; }
+      switch (k) {
+        case 'IBG': return { title: `${IBGs}: background count rate`, nm: `${IBGs}, the background count rate`, where: 'The mean of the three one-minute counts taken with the source in its lead container. Background table, column I<sub>BG</sub>.', src: () => cellOf('bg', 'avg') };
+        case 'I0av': return { title: `${I0avs}: average count rate with no absorber`, nm: `${I0avs}, the mean count with no lead in the slot`, where: 'The mean of three one-minute counts with the source in the holder and x = 0. No-absorber table, column I<sub>0av</sub>.', src: () => cellOf('i0', 'avg') };
+        case 'I0': return { title: `${I0s}: count rate with no absorber, background removed`, nm: `${I0s}, the no-absorber count rate without background`, where: `${I0s} = ${I0avs} − ${IBGs}. No-absorber table, column I<sub>0</sub>.`, src: () => $('i0-val') };
+        case 'Iav': return { title: `${Iavs}: average count rate for row ${rn}`, nm: `${Iavs} for row ${rn} (x = ${rx} cm)`, where: `The mean of the three counts with ${rx} cm of lead in the slot. Main table, row ${rn}, column I<sub>av</sub>.`, src: () => rowInput(ri, 'avg') };
+        case 'I': return { title: `<i>I</i>: count rate through the lead, background removed`, nm: `<i>I</i> for row ${rn} (x = ${rx} cm)`, where: `<i>I</i> = ${Iavs} − ${IBGs} for row ${rn}. Main table, row ${rn}, column I.`, src: () => rowCell(ri, 0) };
+        case 'ln': return { title: `ln(${I0s}/<i>I</i>): natural logarithm of the ratio`, nm: `ln(${I0s}/<i>I</i>) for row ${rn}`, where: `For row ${rn} (x = ${rx} cm). Main table, last column; the same value is the y-value of point ${rn} on the graph.`, src: () => rowCell(ri, 2) };
+        case 'mu': return { title: 'μ: linear attenuation coefficient of lead, in cm<sup>−1</sup>', nm: 'μ, the slope of the best-fit line', where: 'The slope of the best-fit line of ln(I<sub>0</sub>/I) against x, from two points far apart on the line in the Graph panel.', src: lineEl };
+        case 'muH': return { title: 'μ: the slope found in the line above', nm: 'μ, the slope of the best-fit line', where: 'The value worked out in the slope line just above, from the graph.', src: () => { const r = wNum('w-mu', 'r-mu'); return r || (filled(inMu) ? inMu : null); } };
+        case 'x1': return { title: 'x<sub>1</sub>: thickness at the first point picked on the line', nm: `x<sub>1</sub>, the x-value of handle 1 on the best-fit line`, where: "Read on the graph's x-axis, straight below handle 1 on the best-fit line.", src: () => handleEl(0) };
+        case 'y1': return { title: 'y<sub>1</sub>: ln(I<sub>0</sub>/I) at the first point picked on the line', nm: `y<sub>1</sub>, ln(I<sub>0</sub>/I) at x = ${H.A.x.toFixed(2)} cm on the best-fit line`, where: "The ln(I<sub>0</sub>/I) value of handle 1 on the best-fit line, read on the graph's y-axis.", src: () => handleEl(0) };
+        case 'x2': return { title: 'x<sub>2</sub>: thickness at the second point picked on the line', nm: `x<sub>2</sub>, the x-value of handle 2 on the best-fit line`, where: "Read on the graph's x-axis, straight below handle 2 on the best-fit line.", src: () => handleEl(1) };
+        case 'y2': return { title: 'y<sub>2</sub>: ln(I<sub>0</sub>/I) at the second point picked on the line', nm: `y<sub>2</sub>, ln(I<sub>0</sub>/I) at x = ${H.B.x.toFixed(2)} cm on the best-fit line`, where: "The ln(I<sub>0</sub>/I) value of handle 2 on the best-fit line, read on the graph's y-axis.", src: () => handleEl(1) };
+        case 'HVL': return { title: 'HVL: half-value layer, in cm', nm: 'HVL', where: 'The thickness of lead that halves the count rate. It comes from the slope: HVL = ln 2 ÷ μ, with μ from the line above.', src: () => filled(inMu) ? inMu : null };
+        case 'ln2': return { title: '0.693 = ln 2', nm: 'ln 2', where: 'Halving the count rate means I<sub>0</sub>/I = 2, and ln 2 = 0.693. A fixed number, not a measurement.', src: () => null };
+        case 'r-bg': return { title: '', nm: `${IBGs}, the background count rate`, where: `The result of this line. It is used next in ${I0s} = ${I0avs} − ${IBGs}.`, src: () => wNum('w-i0', 'IBG') || lSym('cr-i0', 'IBG') };
+        case 'r-i0': return { title: '', nm: `${I0s}, the no-absorber count rate without background`, where: 'The result of this line. It is used next on top of the ratio in ln(I<sub>0</sub>/I).', src: () => wNum('w-ln', 'I0') || lSym('cr-ln', 'I0') };
+        case 'r-ln': return { title: '', nm: `ln(${I0s}/<i>I</i>) for row ${rn} (x = ${rx} cm)`, where: `The result of this line. It is the y-value of point ${rn} on the graph, which the best-fit line is drawn through.`, src: () => ptEl(ri) };
+        case 'r-mu': return { title: '', nm: 'μ, the slope of the line, in cm<sup>−1</sup>', where: 'The result of this line. It is used next in HVL = 0.693 ÷ μ.', src: () => wNum('w-hvl', 'muH') || lSym('cr-hvl', 'muH') };
+        case 'r-hvl': return { title: '', nm: 'HVL, the half-value layer in cm', where: 'The final result: about this thickness of lead halves the count rate. It goes into the answer box.', src: () => inHvl };
+      }
+      return null;
+    }
+    const trSvg = document.createElementNS(NS, 'svg'); trSvg.setAttribute('class', 'trace-svg'); trSvg.setAttribute('aria-hidden', 'true'); document.body.appendChild(trSvg);
+    const trPath = el('path', { class: 'trace-line', d: '' }, trSvg), trEnd = el('circle', { class: 'trace-dot', r: 4.5, cx: -20, cy: -20 }, trSvg), trBeg = el('circle', { class: 'trace-dot0', r: 3, cx: -20, cy: -20 }, trSvg);
+    const trTip = document.createElement('div'); trTip.className = 'trace-tip'; trTip.id = 'trace-tip'; trTip.setAttribute('role', 'tooltip'); document.body.appendChild(trTip);
+    const spotCap = document.createElement('div'); spotCap.className = 'spot-cap'; spotCap.setAttribute('aria-hidden', 'true'); document.body.appendChild(spotCap);
+    const spotRing = document.createElement('div'); spotRing.className = 'spot-ring'; spotRing.setAttribute('aria-hidden', 'true'); document.body.appendChild(spotRing);
+    const TR = { on: false, from: null, srcFn: null, cur: null, pinned: false };
+    function traceShow(node, o) {
+      o = o || {};
+      let inf = o.info;
+      if (!inf) { const k = node.dataset.ref || node.dataset.sym; inf = INFO(k, node); if (!inf) return; }
+      traceHide();
+      const isNum = node.classList.contains('num');
+      const title = o.info ? inf.title : isNum ? `${node.textContent.trim()} = ${inf.nm}` : inf.title;
+      TR.on = true; TR.from = node; TR.srcFn = inf.src || (() => null); TR.cur = null; TR.pinned = !!o.pinned;
+      node.classList.add('tr-act'); node.setAttribute('aria-describedby', 'trace-tip');
+      trTip.innerHTML = `<b>${title}</b><span>${inf.where}</span><button type="button" class="trace-jump" tabindex="-1"></button>`;
+      trTip.classList.add('on');
+      TR.title = plain(title); TR.where = plain(inf.where);
+      drawTrace();
+    }
+    function traceHide() {
+      if (!TR.on) return;
+      TR.on = false;
+      if (TR.from) { TR.from.classList.remove('tr-act'); TR.from.removeAttribute('aria-describedby'); }
+      if (TR.cur) TR.cur.classList.remove('trace-src');
+      TR.cur = null; trTip.classList.remove('on'); trSvg.classList.remove('on');
+    }
+    const BAR_H = () => (bar.hidden ? 0 : bar.offsetHeight + 16);
+    function placeNear(node, r, prefer) {           // prefer 'below' or 'above' the rectangle r
+      const w = node.offsetWidth, h = node.offsetHeight, vw = document.documentElement.clientWidth, vh = window.innerHeight - BAR_H();
+      const x = clamp(r.left + r.width / 2 - w / 2, 8, Math.max(8, vw - w - 8));
+      let y = prefer === 'below' ? r.bottom + 10 : r.top - h - 10;
+      if (prefer === 'below' && y + h > vh && r.top - h - 10 > 8) y = r.top - h - 10;
+      if (prefer !== 'below' && y < 8) y = r.bottom + 10;
+      node.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    }
+    function drawTrace() {
+      if (!TR.on) return;
+      const from = TR.from;
+      if (!from.isConnected) { traceHide(); return; }
+      const s = TR.srcFn(), src = s && s.isConnected && (s.namespaceURI === NS || filled(s)) ? s : null;
+      if (TR.cur !== src) { if (TR.cur) TR.cur.classList.remove('trace-src'); TR.cur = src; if (TR.cur) TR.cur.classList.add('trace-src'); }
+      const a = from.getBoundingClientRect();
+      if (!TR.cur) { trSvg.classList.remove('on'); trTip.classList.remove('off'); placeNear(trTip, a, 'below'); return; }
+      const b = TR.cur.getBoundingClientRect();
+      const bcx = b.left + b.width / 2, bcy = b.top + b.height / 2, up = bcy < a.top + a.height / 2;
+      placeNear(trTip, a, up ? 'below' : 'above');
+      const sx = a.left + a.width / 2, sy = up ? a.top - 2 : a.bottom + 2;
+      let ex = clamp(sx, b.left + 4, b.right - 4), ey = up ? b.bottom + 5 : b.top - 5;
+      if (Math.abs(bcy - (a.top + a.height / 2)) < Math.max(a.height, b.height) / 2 + 6) { ey = bcy; ex = bcx < sx ? b.right + 5 : b.left - 5; }
+      const my = (sy + ey) / 2;
+      trPath.setAttribute('d', `M${sx.toFixed(1)} ${sy.toFixed(1)} C${sx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`);
+      trEnd.setAttribute('cx', ex.toFixed(1)); trEnd.setAttribute('cy', ey.toFixed(1)); trBeg.setAttribute('cx', sx.toFixed(1)); trBeg.setAttribute('cy', sy.toFixed(1));
+      trSvg.classList.add('on');
+      const off = b.bottom < 0 ? 'up' : b.top > window.innerHeight - BAR_H() ? 'down' : '';
+      trTip.classList.toggle('off', !!off);
+      const j = trTip.querySelector('.trace-jump'); if (j) j.textContent = off === 'up' ? '↑ Jump to source' : off === 'down' ? '↓ Jump to source' : '';
+    }
+    let spotT = null;
+    function spot(t, label) {
+      hi(); hiSvg(null); spotT = null; spotRing.classList.remove('on');
+      if (!t) { spotCap.classList.remove('on'); return; }
+      if (typeof t === 'string') { hiSvg(t); spotT = { box: t }; }
+      else if (t.namespaceURI === NS && t.tagName !== 'svg') { spotT = { ring: t }; spotRing.classList.add('on'); }
+      else { hi(t); spotT = { el: t }; }
+      spotCap.textContent = label || ''; spotCap.classList.toggle('on', !!label);
+    }
+    function boxRect(b) {
+      const m = svg.getScreenCTM(); if (!m || !b) return null;
+      const p1 = new DOMPoint(b[0], b[1]).matrixTransform(m), p2 = new DOMPoint(b[0] + b[2], b[1] + b[3]).matrixTransform(m);
+      return { left: p1.x, top: p1.y, right: p2.x, bottom: p2.y, width: p2.x - p1.x, height: p2.y - p1.y };
+    }
+    function spotRect() { if (!spotT) return null; if (spotT.box) return boxRect(BOX(spotT.box)); const e = spotT.el || spotT.ring; return e.isConnected ? e.getBoundingClientRect() : null; }
+    (function overlays() {
+      const r = spotRect();
+      if (r && spotT.ring) { const p = 6; spotRing.style.transform = `translate(${Math.round(r.left - p)}px, ${Math.round(r.top - p)}px)`; spotRing.style.width = Math.round(r.width + 2 * p) + 'px'; spotRing.style.height = Math.round(r.height + 2 * p) + 'px'; }
+      if (r && spotCap.classList.contains('on')) placeNear(spotCap, r, 'above');
+      if (TR.on) drawTrace();
+      requestAnimationFrame(overlays);
+    })();
+    const calcPanel = $('calc-panel');
+    let trHideT = null, lastPT = 'mouse';
+    const trNode = e => e.target && e.target.closest ? e.target.closest('#calc-panel .sym, #calc-panel .num') : null;
+    calcPanel.addEventListener('pointerdown', e => { lastPT = e.pointerType || 'mouse'; }, true);
+    calcPanel.addEventListener('pointerover', e => {
+      if (e.pointerType !== 'mouse' || tut.on) return;
+      const n = trNode(e); if (!n) return;
+      clearTimeout(trHideT); trHiding = false; if (!TR.on || TR.from !== n) traceShow(n);
+    });
+    let trHiding = false;                                    // hide only when the mouse really moves away, so scrolling keeps the line
+    document.addEventListener('pointermove', e => {
+      if (e.pointerType !== 'mouse' || !TR.on || TR.pinned || tut.on) return;
+      const t = e.target, over = t && t.closest && (TR.from.contains(t) || trTip.contains(t));
+      if (over) { clearTimeout(trHideT); trHiding = false; }
+      else if (!trHiding) { trHiding = true; trHideT = setTimeout(() => { trHiding = false; traceHide(); }, 260); }
+    }, { passive: true });
+    calcPanel.addEventListener('click', e => {
+      const n = trNode(e); if (!n) return;
+      e.preventDefault();                                     // a symbol inside a label must not move focus to the input
+      if (tut.on || lastPT === 'mouse') return;
+      if (TR.on && TR.from === n) traceHide(); else traceShow(n, { pinned: true });
+    });
+    calcPanel.addEventListener('keydown', e => { const n = trNode(e); if (n && (e.key === 'Enter' || e.key === ' ') && !tut.on) { e.preventDefault(); if (TR.on && TR.from === n) traceHide(); else traceShow(n, { pinned: true }); } });
+    calcPanel.addEventListener('focusin', e => { const n = trNode(e); if (n && !tut.on && lastPT === 'mouse') traceShow(n); });
+    calcPanel.addEventListener('focusout', e => { const n = trNode(e); if (n && !tut.on && TR.from === n && !trTip.contains(e.relatedTarget)) traceHide(); });
+    document.addEventListener('pointerdown', e => { if (TR.on && !tut.on && !(e.target.closest && e.target.closest('#calc-panel .sym, #calc-panel .num, .trace-tip'))) traceHide(); }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tut.on) traceHide(); });
+    trTip.addEventListener('click', e => {
+      if (!e.target.closest('.trace-jump') || !TR.cur) return;
+      const r = TR.cur.getBoundingClientRect();
+      window.scrollTo({ top: Math.max(0, window.scrollY + r.top - (window.innerHeight - BAR_H()) / 2 + r.height / 2), behavior: 'smooth' });
+    });
+    /* worked lines with hoverable numbers */
+    const NUM = (ref, v) => `<span class="num" tabindex="0" data-ref="${ref}">${v}</span>`;
+    function workBg() { const b = D.bg; return `= (${NUM('bg0', b[0])} + ${NUM('bg1', b[1])} + ${NUM('bg2', b[2])}) ÷ 3 = ${NUM('r-bg', fmtAvg(mean3(b)))}`; }
+    function workI0() { const a = mean3(D.i0), g = mean3(D.bg); return `= ${NUM('I0av', fmtAvg(a))} − ${NUM('IBG', fmtAvg(g))} = ${NUM('r-i0', fmtAvg(a - g))}`; }
+    function workLn(ri) {
+      const dv = derived(), q = dv.rows[ri];
+      return `= ln(${NUM('I0', fmtAvg(dv.I0))} ÷ (${NUM('Iav', fmtAvg(D.rows[ri].avg))} − ${NUM('IBG', fmtAvg(dv.IBG))})) = ln(${fmtAvg(dv.I0)} ÷ ${NUM('I', fmtAvg(q.I))}) = ${NUM('r-ln', q.ln.toFixed(3))}`;
+    }
+    function workMu() { const m = (H.B.y - H.A.y) / (H.B.x - H.A.x); return `= (${NUM('y2', H.B.y.toFixed(2))} − ${NUM('y1', H.A.y.toFixed(2))}) ÷ (${NUM('x2', H.B.x.toFixed(2))} − ${NUM('x1', H.A.x.toFixed(2))}) = ${NUM('r-mu', m.toFixed(2))}`; }
+    function workHvl(mu) { return `= ${NUM('ln2', '0.693')} ÷ ${NUM('muH', mu.toFixed(2))} = ${NUM('r-hvl', (0.693 / mu).toFixed(2))}`; }
+    function setWork(id, html, ri) { html = (html || '').replace(/ ÷ /g, ' <span class="op">÷</span> '); const w = $(id); if (TR.on && w.contains(TR.from)) traceHide(); w.innerHTML = html || ''; if (id === 'w-ln') w.dataset.ri = ri == null ? '' : String(ri); }
+
     /* ---------- start over ---------- */
     function resetAll() {
       if (st.counting) { st.counting = false; if (runResolve) { const f = runResolve; runResolve = null; f(null); } }
-      drag = null; gDrag = null; slotHi.setAttribute('opacity', 0);
+      drag = null; gDrag = null; slotHi.setAttribute('opacity', 0); clearPhotons();
       st.run = null; st.lastRun = null; runsLog.length = 0;
       D.bg = [NaN, NaN, NaN]; D.bgAvg = NaN; D.i0 = [NaN, NaN, NaN]; D.i0Avg = NaN; D.rows = []; hist.length = 0;
       st.stack = [];
@@ -1570,7 +1743,7 @@
       showCount(0); SC.time.textContent = '0 / 60';
       H.A = { x: 0.10, y: 0.30 }; H.B = { x: 1.00, y: 0.70 }; gN = null;
       calcIns.forEach(i => { i.value = ''; i.classList.remove('flag', 'okf'); });
-      ['w-bg', 'w-i0', 'w-ln', 'w-mu', 'w-hvl'].forEach(k => { $(k).textContent = ''; });
+      traceHide(); ['w-bg', 'w-i0', 'w-ln', 'w-mu', 'w-hvl'].forEach(k => setWork(k, ''));
       chk.className = 'check-msg'; chk.textContent = ''; rsay(''); cellMsg('');
       hiSvg(null);
       renderTable(); updStatus();
@@ -1579,12 +1752,18 @@
     $('btn-reset').addEventListener('click', resetAll);
 
     /* ---------- tutorial ---------- */
+    function BOX(kind) {
+      let m = /^plate(\d)$/.exec(kind); if (m) { const p = PLATES[+m[1] - 1]; return [p.x - 8, p.y - 8, p.w + 16, PLATE_H + 16]; }
+      m = /^plab(\d)$/.exec(kind); if (m) return [SLOT_XS(+m[1]) - 30, 610, 60, 38];
+      return {
+        knob: [SC.kx - 52, SC.ky - 52, 104, 104], start: [566, 584, 94, 42], btns: [566, 584, 266, 42], pot: [26, 186, 128, 160], holder: [HOLD_X - 42, BEAM - 84, 84, 132],
+        slot: [SLOT_X - 64, 146, 128, 178], rack: [22, 400, 500, 252], scaler: [544, 398, 442, 250],
+        tongs: [50, 358, 186, 48], tube: [646, BEAM - 24, 216, 48], counts: [568, 443, 252, 72], time: [568, 517, 128, 48], hvd: [692, 517, 128, 48], xlab: [SLOT_X - 70, 140, 140, 30]
+      }[kind] || null;
+    }
     function hiSvg(kind) {
       if (!kind) { hiRing.setAttribute('opacity', 0); return; }
-      const box = {
-        knob: [SC.kx - 52, SC.ky - 52, 104, 104], start: [566, 584, 94, 42], pot: [26, 186, 128, 160], holder: [HOLD_X - 42, BEAM - 84, 84, 132],
-        slot: [SLOT_X - 64, 146, 128, 178], rack: [22, 400, 500, 252], scaler: [544, 398, 442, 250]
-      }[kind];
+      const box = BOX(kind);
       hiRing.setAttribute('x', box[0]); hiRing.setAttribute('y', box[1]); hiRing.setAttribute('width', box[2]); hiRing.setAttribute('height', box[3]);
       hiRing.setAttribute('opacity', 1);
     }
@@ -1664,81 +1843,174 @@
         })();
       });
     }
-    async function countAndRecord(title, text) {
-      step(title, text, '');
-      hiSvg('start'); await wait(450);
-      const pr = startCount(); hiSvg('scaler');
-      const r = await waitRun(pr);
-      tF.innerHTML = `${r.N} counts in 60 s`;
-      await wait(350);
-      hi($('btn-rec')); record(); await wait(500); hi();
+    /* reading time: about 2.5 s plus 60 ms per word at 1× */
+    const words = s => (String(s || '').replace(/<[^>]+>/g, ' ').match(/\S+/g) || []).length;
+    const rt = (...s) => 2500 + 60 * s.reduce((a, x) => a + words(x), 0);
+    function availRect() { return [64, window.innerHeight - BAR_H() - 8]; }
+    async function bringIn(r) {                              // scroll only when the rectangle is not already in view
+      if (!r) return;
+      const [a0, a1] = availRect();
+      if (r.top >= a0 - 2 && r.bottom <= a1 + 2) return;
+      let y = window.scrollY + (r.top + r.bottom) / 2 - (a0 + a1) / 2;
+      if (r.height > a1 - a0) y = window.scrollY + r.top - a0;
+      await tScroll(Math.max(0, y)); await wait(350);
+    }
+    function unionRect(a, b) { const t = Math.min(a.top, b.top), btm = Math.max(a.bottom, b.bottom); return { top: t, bottom: btm, height: btm - t }; }
+    async function teach(title, text, o) {
+      o = o || {};
+      traceHide();
+      if (o.trace && !o.keepText) { const n = o.trace, inf = INFO(n.dataset.ref || n.dataset.sym, n); title = plain(n.classList.contains('num') ? `${n.textContent.trim()} = ${inf.nm}` : inf.title); text = plain(inf.where); }
+      step(title, text, o.f);
+      if (o.box) { await bringIn(boxRect(BOX(o.box))); spot(o.box, o.label); }
+      else if (o.el) { await bringIn(o.el.getBoundingClientRect()); spot(o.el, o.label); }
+      else spot(null);
+      if (o.trace) {                                          // a number in a worked line: show it with its source
+        const n = o.trace, inf = o.info || INFO(n.dataset.ref || n.dataset.sym, n), s = inf && inf.src ? inf.src() : null;
+        const nr = n.getBoundingClientRect();
+        if (s && s.isConnected) { const sr = s.getBoundingClientRect(), [a0, a1] = availRect(); await bringIn(unionRect(nr, sr).height <= a1 - a0 - 90 ? unionRect(nr, sr) : sr); }
+        else await bringIn(nr);
+        traceShow(n, o.info ? { info: o.info } : null);
+      }
+      await wait(o.ms != null ? o.ms : rt(title, text, o.f));
+    }
+    const COLN = ['I₁', 'I₂', 'I₃'];
+    function lastCell() {                                     // the table cell the last recorded count went into
+      const h = hist[hist.length - 1]; if (!h) return null;
+      if (h.key === 'bg' || h.key === 'i0') return { el: cellOf(h.key, h.i), where: (h.key === 'bg' ? 'Background table' : 'No-absorber table') + ', column ' + COLN[h.i], col: COLN[h.i] };
+      const ri = D.rows.findIndex(q => Math.abs(q.x - h.x) < 1e-6);
+      return { el: rowInput(ri, h.i), where: `main table, row ${ri + 1} (x = ${h.x.toFixed(2)} cm), column ${COLN[h.i]}`, col: COLN[h.i], ri };
+    }
+    async function runCount(label) {
+      const pr = startCount(); spot('counts', label || 'COUNTS');
+      return waitRun(pr);
+    }
+    async function countFull(title, intro, introBox, introLabel) {
+      await teach(title, intro, { box: introBox, label: introLabel });
+      await teach('START', 'START is pressed: the scaler begins a 60 s count.', { box: 'start', label: 'START' });
+      const ctext = 'Each pulse from the tube adds one to COUNTS and flashes the count lamp, while TIME runs from 0 to 60 s.', c0 = tnow();
+      step('Counting', ctext, 'counting…');
+      const r = await runCount('COUNTS rising');
+      await wait(Math.max(0, rt('Counting', ctext) - (tnow() - c0)));        // the caption stays long enough to read
+      await teach('Reading the scaler', `TIME shows 60 / 60, so the count is complete. COUNTS shows ${r.N}: ${r.N} pulses in one minute, a count rate of ${r.N} counts/min.`, { box: 'counts', label: `${r.N} counts/min`, f: `${r.N} counts in 60 s` });
+      await teach('Record', 'Record copies the finished count into the next empty cell of the table for this set-up.', { el: $('btn-rec'), label: 'Record' });
+      record();
+      const c = lastCell();
+      await teach('Into the table', `${r.N} goes into the ${c.where}.`, { el: c.el, label: `${c.col} = ${r.N}`, f: `${c.col} = ${r.N} counts/min` });
       return r;
+    }
+    async function countShort(title, text) {
+      step(title, text, 'counting…');
+      await bringIn(boxRect(BOX('scaler')));
+      const r = await runCount('COUNTS');
+      record();
+      const c = lastCell();
+      tF.innerHTML = `${r.N} counts/min → ${c.col}`; spot('counts', `${r.N} → ${c.col}`);
+      await wait(rt(text, tF.textContent));
+      return r;
+    }
+    async function slidePlate(pl) {
+      pl.loc = 'anim'; dragLayer.appendChild(pl.g);
+      await tween(pl, pl.x, 150, 700, placePlate);
+      await addToStack(pl, true);
+    }
+    async function traceLine(id) {                            // walk through every number of a worked line
+      const seen = new Set();
+      for (const n of $(id).querySelectorAll('.num')) {
+        const k = n.dataset.ref; if (seen.has(k)) continue; seen.add(k);
+        await teach('', '', { trace: n });
+      }
     }
     async function tutorial(target) {
       tut.on = true; tut.cancel = false; navBegin(target); document.body.classList.add('tut-on'); bar.hidden = false; btnTut.disabled = true;
       try {
         resetAll();
         st.rng = mulberry32(20261011);
-        st.mode = 30; selMode.value = '30'; updStatus();
+        st.mode = 10; selMode.value = '10'; updStatus();
         const rig = $('rig-frame'), tbl = $('tbl-panel'), graph = $('graph-panel'), calc = $('calc-panel');
         await scrollToEl(rig);
-        step('Raise the high voltage', 'The HV knob is turned up slowly. Below about 380 V the tube does not count; the rate rises, then levels off on the plateau.', '');
-        hiSvg('knob'); await wait(600);
-        await ramp(0, 500, 3400);
-        step('Operating voltage', 'About 500 V sits in the middle of the plateau, where a small drift in voltage hardly changes the count rate.', 'HV = 500 V');
-        await wait(1800);
-        step('Compressed counting time', 'Each count is a full 60 s on the scaler clock, run 30 times faster here. The display still gives counts per minute.', 'count time: 60 s, fast ×30');
-        hi($('c-mode')); await wait(2000); hi();
-        for (let k = 1; k <= 3; k++) await countAndRecord(`Background, count ${k} of 3`, k === 1 ? 'The source stays shut in its lead container, so the tube counts only the background.' : 'Another one-minute background count. Random decay makes each count a little different.');
-        await scrollToEl(tbl, true); hi($('bg-block'));
+        /* the bench, one element at a time */
+        await teach('The bench', 'A gamma source, a slot for lead sheets and a Geiger–Müller (GM) tube sit in a line on the bench. The scaler counts the pulses from the tube. Each part is shown in turn.', { el: rig });
+        await teach('Lead container', 'The Cs-137 gamma source is stored in this thick lead container. While the source is inside, almost no gamma rays escape, so the tube counts only background radiation.', { box: 'pot', label: 'lead container' });
+        await teach('Tongs', 'The source is only ever handled with long tongs, held at arm\'s length and pointed away from people, never by hand.', { box: 'tongs', label: 'tongs' });
+        await teach('Source holder', 'The holder keeps the source at a fixed distance from the tube, aimed at the tube\'s window. The distance never changes during the experiment.', { box: 'holder', label: 'source holder' });
+        await teach('Absorber slot', 'Lead sheets go into this slot, midway between source and tube. The label above it gives x, the total thickness of lead in the beam. It reads x = 0.00 cm now.', { box: 'slot', label: 'absorber slot' });
+        await teach('GM tube', 'Gamma rays that enter the window can ionise the gas inside the tube. Each burst of ionisation is one electrical pulse, and each pulse is one count.', { box: 'tube', label: 'GM tube' });
+        await teach('Lead sheets', 'Seven lead sheets wait in a numbered rack. The label under each one is its thickness: sheet #1 is 0.1 cm, sheets #2 to #6 are 0.2 cm each, sheet #7 is 0.5 cm.', { box: 'rack', label: 'rack of lead sheets' });
+        await teach('Scaler', 'The scaler supplies the high voltage for the tube and counts its pulses over a preset time.', { box: 'scaler', label: 'GM scaler' });
+        await teach('COUNTS display', 'Shows how many pulses have been counted so far in the current run.', { box: 'counts', label: 'COUNTS' });
+        await teach('TIME display', 'Shows how many seconds of the 60 s preset have passed.', { box: 'time', label: 'TIME' });
+        await teach('HV display', 'Shows the voltage across the tube. It reads 0 V, so the tube cannot count yet.', { box: 'hvd', label: 'HV' });
+        await teach('HV knob', 'Turning the knob clockwise raises the high voltage. It is turned slowly while the HV display is watched.', { box: 'knob', label: 'HV knob' });
+        await teach('Raise the high voltage', 'The knob turns up slowly. Below about 380 V the tube does not count; above that the rate rises, then levels off on the plateau.', { box: 'hvd', label: 'HV rising', ms: 1200 });
+        await ramp(0, 500, 5200);
+        await teach('Operating voltage', 'About 500 V sits in the middle of the plateau, where a small drift in voltage hardly changes the count rate.', { box: 'hvd', label: '500 V', f: 'HV = 500 V' });
+        await teach('Count time', 'Each count lasts 60 s on the scaler clock. To save time the clock runs faster: the first count here at ×10 (6 s), the rest at ×30 (2 s). The display still gives counts per minute.', { el: $('c-mode'), label: 'count time' });
+        await teach('START, STOP and RESET', 'START begins a 60 s count. STOP ends a count early and RESET clears the display. A count stopped early is not a count per minute, so it is never recorded.', { box: 'btns', label: 'START · STOP · RESET' });
+        /* background */
+        await countFull('Background, count 1 of 3', 'The source stays shut in its container, so this count measures only the background: cosmic rays and natural radioactivity around the bench.', 'pot', 'source shut away');
+        st.mode = 30; selMode.value = '30'; updStatus();
+        for (let k = 2; k <= 3; k++) await countShort(`Background, count ${k} of 3`, 'Another one-minute background count, now at ×30. Random decay makes each count a little different.');
         const bgM = mean3(D.bg);
-        step('Average background', 'The three background counts are averaged.', `I<sub>BG</sub> = (${D.bg.join(' + ')}) ÷ 3 = ${fmtAvg(bgM)} counts/min`);
-        await wait(2800); hi();
-        await scrollToEl(rig);
-        step('Source to the holder', 'With the tongs, at arm\'s length and pointed away from people, the source goes from its container into the holder, facing the tube.', '');
-        hiSvg('pot'); await wait(700); hiSvg(null);
-        await moveSource('holder', 2600);
-        hiSvg('holder'); await wait(900);
-        for (let k = 1; k <= 3; k++) await countAndRecord(`No absorber, count ${k} of 3`, k === 1 ? 'Nothing in the absorber slot: this gives I₀av.' : 'Repeat the count with no absorber.');
-        await scrollToEl(tbl, true); hi($('i0-block'));
+        await teach('Average background', 'The three background counts are added and divided by 3. This mean is I_BG, the background count rate.', { el: cellOf('bg', 'avg'), label: 'I_BG', f: `I<sub>BG</sub> = (${D.bg.join(' + ')}) ÷ 3 = ${fmtAvg(bgM)} counts/min` });
+        /* source to the holder */
+        await teach('Tongs pick up the source', 'At arm\'s length and pointed away from people, the tongs lift the source out of its container and carry it to the holder.', { box: 'tongs', label: 'tongs' });
+        await moveSource('holder', 3400);
+        await teach('Source in the holder', 'The source now faces the tube. The dashed line marks the path of the gamma rays to the window.', { box: 'holder', label: 'source in the holder' });
+        await teach('No absorber yet', 'The slot is still empty, so x = 0.00 cm. These counts give I₀av, the count rate with no lead in the way.', { box: 'xlab', label: 'x = 0.00 cm' });
+        for (let k = 1; k <= 3; k++) await countShort(`No absorber, count ${k} of 3`, k === 1 ? 'START, then a one-minute count with the source in the holder and no lead.' : 'Repeat the count with no absorber.');
         const i0M = mean3(D.i0);
-        step('I₀ without background', 'Average the three counts, then subtract the background.', `I<sub>0</sub> = ${fmtAvg(i0M)} − ${fmtAvg(bgM)} = ${fmtAvg(i0M - bgM)} counts/min`);
-        await wait(3000); hi();
+        await teach('Average with no absorber', 'The three no-absorber counts are added and divided by 3. This mean is I₀av.', { el: cellOf('i0', 'avg'), label: 'I₀av', f: `I<sub>0av</sub> = (${D.i0.join(' + ')}) ÷ 3 = ${fmtAvg(i0M)} counts/min` });
+        await teach('I₀: background removed', 'Background is part of every count, so it is subtracted: I₀ = I₀av − I_BG.', { el: $('i0-val'), label: 'I₀', f: `I<sub>0</sub> = ${fmtAvg(i0M)} − ${fmtAvg(bgM)} = ${fmtAvg(i0M - bgM)} counts/min` });
+        /* lead rows */
         const order = [2, 3, 4, 5, 6];
         for (let j = 0; j < order.length; j++) {
-          await scrollToEl(rig);
-          const pl = PLATES[order[j] - 1];
-          step('Add lead', j === 0 ? `Sheet #${pl.n}, 0.2 cm thick, goes into the slot midway between source and tube.` : `Sheet #${pl.n} (0.2 cm) is added to the stack.`, `x = ${(stackX() + pl.t).toFixed(2)} cm`);
-          hiSvg('rack'); await wait(600); hiSvg('slot');
-          pl.loc = 'anim'; dragLayer.appendChild(pl.g);
-          await tween(pl, pl.x, 150, 500, placePlate);
-          await addToStack(pl, true);
-          await wait(500);
-          const x = stackX();
-          for (let k = 1; k <= 3; k++) await countAndRecord(`x = ${x.toFixed(2)} cm, count ${k} of 3`, k === 1 ? 'Three one-minute counts with this thickness of lead.' : 'Repeat the count.');
-          await scrollToEl(tbl, true);
-          const ri = D.rows.findIndex(r => Math.abs(r.x - x) < 1e-6), row = D.rows[ri], dv = derived().rows[ri];
+          const pl = PLATES[order[j] - 1], xNew = +(stackX() + pl.t).toFixed(2);
+          if (j === 0) {
+            await teach(`Lead sheet #${pl.n}`, `Sheet #${pl.n} is taken from slot ${pl.n} of the rack.`, { box: 'plate' + pl.n, label: `sheet #${pl.n}` });
+            await teach('Its thickness', `The label under slot ${pl.n} gives the sheet's thickness: ${pl.t.toFixed(1)} cm.`, { box: 'plab' + pl.n, label: `${pl.t.toFixed(1)} cm` });
+            await teach('Into the slot', 'The sheet slides into the absorber slot, square to the beam.', { box: 'slot', label: 'absorber slot', ms: 900 });
+            await slidePlate(pl);
+            await teach('Thickness x', `The label above the slot now reads x = ${xNew.toFixed(2)} cm: the total lead between source and tube.`, { box: 'xlab', label: `x = ${xNew.toFixed(2)} cm` });
+            await countFull(`x = ${xNew.toFixed(2)} cm, count 1 of 3`, 'Three one-minute counts are taken with this thickness. The lead absorbs some of the gamma rays, so the count rate drops.', 'slot', `x = ${xNew.toFixed(2)} cm`);
+            for (let k = 2; k <= 3; k++) await countShort(`x = ${xNew.toFixed(2)} cm, count ${k} of 3`, 'Repeat the count with the same lead.');
+          } else {
+            await teach(`Add sheet #${pl.n}`, `Sheet #${pl.n} (${pl.t.toFixed(1)} cm, label under slot ${pl.n}) joins the stack.`, { box: 'plate' + pl.n, label: `sheet #${pl.n}`, ms: 2600 });
+            await slidePlate(pl);
+            await teach(`x = ${xNew.toFixed(2)} cm`, `The total thickness of lead in the slot is now ${xNew.toFixed(2)} cm.`, { box: 'xlab', label: `x = ${xNew.toFixed(2)} cm` });
+            for (let k = 1; k <= 3; k++) await countShort(`x = ${xNew.toFixed(2)} cm, count ${k} of 3`, k === 1 ? 'Three one-minute counts with this thickness.' : 'Repeat the count.');
+          }
+          const ri = D.rows.findIndex(r => Math.abs(r.x - xNew) < 1e-6), row = D.rows[ri], dv = derived().rows[ri], I0v = derived().I0;
           const tr = document.querySelector(`#p-tbody tr[data-ri="${ri}"]`);
-          if (tr) { hi(tr); tr.querySelectorAll('td.calc-c').forEach(td => td.classList.add('hl')); }
-          step(`Row ${ri + 1}: I and ln(I₀/I)`, 'The average has the background removed, then the ratio and its natural logarithm are worked out.', `I = ${fmtAvg(row.avg)} − ${fmtAvg(bgM)} = ${fmtAvg(dv.I)} · ln(${fmtAvg(i0M - bgM)} ÷ ${fmtAvg(dv.I)}) = ln(${dv.q.toFixed(3)}) = ${dv.ln.toFixed(3)}`);
-          await wait(j === 0 ? 3400 : 2200);
-          if (tr) tr.querySelectorAll('td.calc-c').forEach(td => td.classList.remove('hl'));
-          hi();
+          const avgTxt = `I<sub>av</sub> = (${row.r.join(' + ')}) ÷ 3 = ${fmtAvg(row.avg)}`, iTxt = `I = ${fmtAvg(row.avg)} − ${fmtAvg(bgM)} = ${fmtAvg(dv.I)}`;
+          const qTxt = `I<sub>0</sub> / I = ${fmtAvg(I0v)} ÷ ${fmtAvg(dv.I)} = ${dv.q.toFixed(3)}`, lnTxt = `ln(${dv.q.toFixed(3)}) = ${dv.ln.toFixed(3)}`;
+          if (j === 0) {
+            await teach(`Row ${ri + 1}: average`, 'The three counts are added and divided by 3.', { el: rowInput(ri, 'avg'), label: 'I_av', f: avgTxt });
+            await teach(`Row ${ri + 1}: I`, 'The background is removed from the average: I = I_av − I_BG.', { el: rowCell(ri, 0), label: 'I', f: iTxt });
+            await teach(`Row ${ri + 1}: I₀ / I`, 'I₀ is divided by I: how many times weaker the beam is after the lead.', { el: rowCell(ri, 1), label: 'I₀ / I', f: qTxt });
+            await teach(`Row ${ri + 1}: ln(I₀/I)`, 'The natural logarithm of the ratio. This is the value plotted on the graph against x.', { el: rowCell(ri, 2), label: 'ln(I₀/I)', f: lnTxt });
+          } else {
+            await teach(`Row ${ri + 1}: x = ${xNew.toFixed(2)} cm`, 'Average, background removed, ratio and logarithm, as for row 1.', { el: tr, label: `row ${ri + 1}`, f: `${avgTxt} · ${iTxt} · ${qTxt} · ${lnTxt}` });
+          }
         }
-        await scrollToEl(rig);
-        step('Source back in its container', 'Counting is done, so the source returns to its lead container straight away.', '');
-        await moveSource('pot', 2200); await wait(500);
-        await scrollToEl(graph, true); hi(gsvg);
-        step('Plot the graph', 'ln(I₀/I) goes on the y-axis and x on the x-axis, one point per row.', '');
-        for (let n = 1; n <= D.rows.length; n++) { gN = n; drawGraph(); await wait(650); }
+        await teach('Source back in its container', 'Counting is done, so the source returns to its lead container straight away.', { box: 'tongs', label: 'tongs', ms: 2600 });
+        await moveSource('pot', 2600);
+        /* graph */
+        await teach('The graph', 'x, the lead thickness in cm, runs along the horizontal axis; ln(I₀/I) runs up the vertical axis. Each table row gives one point.', { el: gsvg, label: 'graph' });
+        const dvAll = derived().rows;
+        for (let n = 1; n <= D.rows.length; n++) {
+          gN = n; drawGraph();
+          const ri = n - 1, q = dvAll[ri], c = rowCell(ri, 2), xs = q.x.toFixed(2), ys = q.ln.toFixed(3);
+          const info = { title: `Point ${n} = (${xs}, ${ys})`, where: n === 1 ? `Row 1 of the table: x = ${xs} cm across, ln(I₀/I) = ${ys} up. The dotted line runs from the table cell to the point.` : `From row ${n}: x = ${xs} cm, ln(I₀/I) = ${ys}.`, src: () => ptEl(ri) };
+          await teach(`Point ${n}`, info.where, { trace: c, info, keepText: true, f: `(x, y) = (${xs}, ${ys}), row ${n}` });
+        }
         gN = null; drawGraph();
         const pts = graphPoints(), m = originSlope(pts), xs = Math.max(...pts.map(p => p.x));
         const A1 = { x: 0.10, y: +(0.10 * m).toFixed(2) }, B1 = { x: +xs.toFixed(2), y: +(xs * m).toFixed(2) };
-        step('Best-fit line', 'A straight line through the origin region, with the points scattered evenly about it. Two points far apart on the line give the slope.', '');
+        await teach('Best-fit line', 'A straight line through the origin region, with the points scattered evenly about it. Two points far apart on the line give the slope.', { el: gsvg, label: 'best-fit line', ms: 3000 });
         const A0 = { x: H.A.x, y: H.A.y }, B0 = { x: H.B.x, y: H.B.y }, t0 = tnow();
         for (;;) {
           if (tut.cancel) throw STOP;
-          let k = Math.min(1, (tnow() - t0) / 1800); if (tut.skip) k = 1;
+          let k = Math.min(1, (tnow() - t0) / 2400); if (tut.skip) k = 1;
           const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
           H.A.x = +(A0.x + (A1.x - A0.x) * e).toFixed(2); H.A.y = +(A0.y + (A1.y - A0.y) * e).toFixed(2);
           H.B.x = +(B0.x + (B1.x - B0.x) * e).toFixed(2); H.B.y = +(B0.y + (B1.y - B0.y) * e).toFixed(2);
@@ -1747,35 +2019,37 @@
           await sleep(30);
         }
         const mu = +((H.B.y - H.A.y) / (H.B.x - H.A.x)).toFixed(2), hvl = +(0.693 / mu).toFixed(2);
-        tF.innerHTML = `slope = (${H.B.y.toFixed(2)} − ${H.A.y.toFixed(2)}) ÷ (${H.B.x.toFixed(2)} − ${H.A.x.toFixed(2)}) = ${mu.toFixed(2)} cm<sup>−1</sup>`;
-        hi($('g-read')); await wait(3000); hi();
-        await scrollToEl(calc, true);
-        step('Background', 'Mean of the three background counts.', `I<sub>BG</sub> = ${fmtAvg(bgM)} counts/min`);
-        hi($('cr-bg')); $('w-bg').textContent = `= (${D.bg.join(' + ')}) ÷ 3 = ${fmtAvg(bgM)}`;
-        await typeInto(inBg, fmtAvg(bgM)); await wait(800);
-        step('I₀', 'The no-absorber average minus the background.', `I<sub>0</sub> = ${fmtAvg(i0M)} − ${fmtAvg(bgM)} = ${fmtAvg(i0M - bgM)}`);
-        hi($('cr-i0')); $('w-i0').textContent = `= ${fmtAvg(i0M)} − ${fmtAvg(bgM)} = ${fmtAvg(i0M - bgM)}`;
-        await typeInto(inI0, fmtAvg(i0M - bgM)); await wait(800);
+        await teach('Point 1 on the line', `Handle 1 sits on the line at x₁ = ${H.A.x.toFixed(2)} cm, y₁ = ${H.A.y.toFixed(2)}: x₁ is read on the x-axis below it, y₁ on the y-axis level with it.`, { el: handleEl(0), label: '(x₁, y₁)', f: `(x₁, y₁) = (${H.A.x.toFixed(2)}, ${H.A.y.toFixed(2)})` });
+        await teach('Point 2 on the line', `Handle 2, far from handle 1 for accuracy: x₂ = ${H.B.x.toFixed(2)} cm, y₂ = ${H.B.y.toFixed(2)}.`, { el: handleEl(1), label: '(x₂, y₂)', f: `(x₂, y₂) = (${H.B.x.toFixed(2)}, ${H.B.y.toFixed(2)})` });
+        await teach('Slope', 'Rise over run between the two handles: Δy ÷ Δx. The dashed triangle on the graph shows Δx and Δy.', { el: $('g-read'), label: 'slope', f: `slope = (${H.B.y.toFixed(2)} − ${H.A.y.toFixed(2)}) ÷ (${H.B.x.toFixed(2)} − ${H.A.x.toFixed(2)}) = ${mu.toFixed(2)} cm<sup>−1</sup>` });
+        /* calculation: every number traced back to its source */
+        await teach('Calculation', 'Each line takes its numbers from the table or the graph. A dotted line runs from each number to where it comes from.', { el: calc });
+        await teach('Background I_BG', 'The mean of the three background counts.', { el: $('cr-bg'), label: 'I_BG line' });
+        setWork('w-bg', workBg()); await traceLine('w-bg');
+        await teach('Background I_BG', 'The result goes into the answer box.', { el: inBg, ms: 1400 }); await typeInto(inBg, fmtAvg(bgM)); await wait(600);
+        await teach('I₀', 'The no-absorber average minus the background.', { el: $('cr-i0'), label: 'I₀ line' });
+        setWork('w-i0', workI0()); await traceLine('w-i0');
+        await teach('I₀', 'The result goes into the answer box.', { el: inI0, ms: 1400 }); await typeInto(inI0, fmtAvg(i0M - bgM)); await wait(600);
         const dvr = derived().rows, r3 = Math.min(2, dvr.length - 1);
         selRow.value = String(r3);
-        step('ln(I₀/I) for one row', `Row ${r3 + 1}, x = ${dvr[r3].x.toFixed(2)} cm: natural logarithm of the ratio.`, `ln(${fmtAvg(i0M - bgM)} ÷ ${fmtAvg(dvr[r3].I)}) = ln(${dvr[r3].q.toFixed(3)}) = ${dvr[r3].ln.toFixed(3)}`);
-        hi($('cr-ln')); $('w-ln').textContent = `= ln(${fmtAvg(i0M - bgM)} ÷ ${fmtAvg(dvr[r3].I)}) = ${dvr[r3].ln.toFixed(3)}`;
-        await typeInto(inLn, dvr[r3].ln.toFixed(3)); await wait(800);
-        step('Slope μ', 'Rise over run between the two points on the line.', `μ = (${H.B.y.toFixed(2)} − ${H.A.y.toFixed(2)}) ÷ (${H.B.x.toFixed(2)} − ${H.A.x.toFixed(2)}) = ${mu.toFixed(2)} cm<sup>−1</sup>`);
-        hi($('cr-mu')); $('w-mu').textContent = `= (${H.B.y.toFixed(2)} − ${H.A.y.toFixed(2)}) ÷ (${H.B.x.toFixed(2)} − ${H.A.x.toFixed(2)}) = ${mu.toFixed(2)}`;
-        await typeInto(inMu, mu.toFixed(2)); await wait(800);
-        step('Half-value layer', 'HVL = ln 2 ÷ μ.', `HVL = 0.693 ÷ ${mu.toFixed(2)} = ${hvl.toFixed(2)} cm`);
-        hi($('cr-hvl')); $('w-hvl').textContent = `= 0.693 ÷ ${mu.toFixed(2)} = ${hvl.toFixed(2)}`;
-        await typeInto(inHvl, hvl.toFixed(2)); await wait(800);
-        hi($('btn-check')); await wait(600); check(); hi(chk);
-        step('Done', `μ ≈ ${mu.toFixed(2)} cm⁻¹ and HVL ≈ ${hvl.toFixed(2)} cm. Start over to take the readings by hand.`, '');
-        await wait(4500);
+        await teach('ln(I₀/I) for one row', `Row ${r3 + 1} is chosen (x = ${dvr[r3].x.toFixed(2)} cm). The background is removed from its average, then the ratio and its natural logarithm are taken.`, { el: $('cr-ln'), label: 'ln(I₀/I) line' });
+        setWork('w-ln', workLn(r3), r3); await traceLine('w-ln');
+        await teach('ln(I₀/I)', 'The result goes into the answer box.', { el: inLn, ms: 1400 }); await typeInto(inLn, dvr[r3].ln.toFixed(3)); await wait(600);
+        await teach('Slope μ', 'Rise over run between the two points picked on the best-fit line.', { el: $('cr-mu'), label: 'slope line' });
+        setWork('w-mu', workMu()); await traceLine('w-mu');
+        await teach('Slope μ', 'The result goes into the answer box.', { el: inMu, ms: 1400 }); await typeInto(inMu, mu.toFixed(2)); await wait(600);
+        await teach('Half-value layer', 'HVL = ln 2 ÷ μ: the thickness of lead that halves the count rate.', { el: $('cr-hvl'), label: 'HVL line' });
+        setWork('w-hvl', workHvl(mu)); await traceLine('w-hvl');
+        await teach('Half-value layer', 'The result goes into the answer box.', { el: inHvl, ms: 1400 }); await typeInto(inHvl, hvl.toFixed(2)); await wait(600);
+        await teach('Check', 'Check compares each answer with the readings and the graph.', { el: $('btn-check'), label: 'Check', ms: 2200 });
+        check();
+        await teach('Done', `μ ≈ ${mu.toFixed(2)} cm⁻¹ and HVL ≈ ${hvl.toFixed(2)} cm. Hovering (or tapping) any symbol or number in the Calculation shows where it comes from. Start over to take the readings by hand.`, { el: chk });
       } catch (e) {
         if (e !== STOP) throw e;
       } finally {
         const again = tut.restartTo; tut.restartTo = null; tut.gen++; tut.ff = false; document.body.classList.remove('tut-ff');
         if (st.counting) { st.counting = false; runResolve = null; }
-        tut.on = false; tut.skip = false; if (again == null) resetPlayback(); hi(); hiSvg(null); st.rng = Math.random; gN = null;
+        tut.on = false; tut.skip = false; if (again == null) resetPlayback(); spot(null); traceHide(); st.rng = Math.random; gN = null;
         if (SRC.loc === 'drag') { tongsOn = false; SRC.x = POT_SRC.x; SRC.y = POT_SRC.y; placeSrc(); placeTongs(); setSrcLoc('pot'); }
         PLATES.forEach(p => { if (p.loc === 'anim') { p.loc = 'rack'; rackLayer.appendChild(p.g); const h = p.home(); p.x = h.x; p.y = h.y; placePlate(p); } });
         drawGraph(); updStatus();

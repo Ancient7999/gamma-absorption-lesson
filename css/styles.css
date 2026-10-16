@@ -411,3 +411,26 @@ body.tut-paused .tut-hi{animation-play-state:paused}
   .tut-ctl > *{flex:none;min-width:0}
   .tut-ctl .tut-btn{padding-left:8px;padding-right:8px}
 }
+/* traceable calculation */
+.cr .sym,.cr-work .num{cursor:help;border-bottom:1.5px dotted rgba(201,138,16,.8);border-radius:3px;padding:0 1px;transition:background-color .2s,box-shadow .2s;outline:none}
+.cr .sym:hover,.cr-work .num:hover,.cr .sym:focus-visible,.cr-work .num:focus-visible,.cr .tr-act,.cr-work .tr-act{background:rgba(201,138,16,.15);box-shadow:0 0 0 2px rgba(201,138,16,.18)}
+body.tut-on .cr .sym,body.tut-on .cr-work .num{cursor:default}
+.trace-svg{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:440;opacity:0;transition:opacity .25s ease;overflow:visible}
+.trace-svg.on{opacity:1}
+.trace-line{fill:none;stroke:var(--sig);stroke-width:2;stroke-dasharray:1.5 6;stroke-linecap:round;animation:trDash 1s linear infinite}
+@keyframes trDash{to{stroke-dashoffset:-15}}
+.trace-dot{fill:var(--sig)}.trace-dot0{fill:var(--sig);opacity:.55}
+.trace-tip{position:fixed;left:0;top:0;z-index:460;width:max-content;max-width:min(330px,calc(100vw - 16px));background:rgba(34,38,43,.97);color:#f1efe9;font:500 13.5px/1.45 var(--f-body);padding:9px 12px;border-radius:10px;box-shadow:0 12px 28px -10px rgba(0,0,0,.45);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility 0s linear .2s}
+.trace-tip.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .2s ease}
+.trace-tip b{display:block;color:var(--sig-3);font-weight:700;margin-bottom:2px}
+.trace-tip span{display:block}
+.trace-jump{display:none;margin-top:7px;font:600 12.5px/1 var(--f-body);color:#22262b;background:var(--sig-3);border:0;border-radius:7px;padding:6px 9px;cursor:pointer}
+.trace-tip.off .trace-jump{display:inline-block}
+.trace-src{outline:2px dashed var(--sig)!important;outline-offset:3px;background-color:rgba(201,138,16,.1);transition:background-color .25s}
+svg .trace-src{outline:none!important;filter:drop-shadow(0 0 4px rgba(201,138,16,.95)) drop-shadow(0 0 2px rgba(201,138,16,.9))}
+.spot-cap{position:fixed;left:0;top:0;z-index:445;background:var(--sig);color:#fff;font:700 13px/1.2 var(--f-head);letter-spacing:.02em;padding:6px 10px;border-radius:8px;box-shadow:0 6px 16px -6px rgba(0,0,0,.4);opacity:0;visibility:hidden;pointer-events:none;white-space:nowrap;transition:opacity .25s ease,visibility 0s linear .25s}
+.spot-cap.on{opacity:1;visibility:visible;transition:opacity .25s ease}
+.spot-ring{position:fixed;left:0;top:0;width:0;height:0;z-index:444;border:3px solid var(--sig);border-radius:12px;pointer-events:none;opacity:0;transition:opacity .2s}
+.spot-ring.on{opacity:1}
+body:not(.tut-on) .spot-cap,body:not(.tut-on) .spot-ring{display:none}
+.cr-work .op{font-family:var(--f-body);font-weight:600}
