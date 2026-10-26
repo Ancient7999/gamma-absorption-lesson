@@ -4,7 +4,7 @@
 
 An interactive, single-page lesson on finding the linear absorption coefficient μ of lead for gamma rays with a Geiger–Müller counter, and the half-value layer that follows from it.
 
-Live site: https://sonicunligmated.github.io/gamma-absorption-lesson/
+Live site: https://Ancient7999.github.io/gamma-absorption-lesson/
 
 ## Sections
 
